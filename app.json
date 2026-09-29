@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "foodlens_fruits360",
+    "slug": "foodlens",
+    "version": "1.0.0",
+    "owner": "tinyfr0gs-organization",
+    "ios": {
+      "bundleIdentifier": "com.anonymous.foodlens-fruits360"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "29706a03-8c7e-4450-abf4-0f924d26939d"
+      }
+    },
+    "plugins": [
+      "expo-font",
+      "expo-router",
+      "expo-web-browser",
+      "expo-image",
+      "expo-splash-screen",
+      "expo-status-bar"
+    ]
+  }
+}

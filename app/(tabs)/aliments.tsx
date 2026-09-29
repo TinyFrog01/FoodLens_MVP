@@ -1,0 +1,550 @@
+import { items } from "@/app/Food/data/items";
+import { staples } from "@/app/Food/data/staples";
+import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
+import Fuse from "fuse.js";
+import React, { useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  Dimensions,
+  FlatList,
+  PanResponder,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+
+const { width } = Dimensions.get("window");
+const horizontalPadding = width * 0.05;
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const LETTER_HEIGHT = 15;
+
+// Fixed row heights used to compute scroll offsets analytically instead of
+// relying on FlatList.scrollToIndex (which only works for already-measured
+// rows and was causing the "flash back to A" bug on far jumps).
+const ITEM_ROW_HEIGHT = 92; // card padding/margins from styles.card
+const HEADER_ROW_HEIGHT = 48; // letterHeader padding/margins from styles.letterHeader
+
+type Item = {
+  id: string;
+  name: string;
+  location: string;
+  quantity: number;
+};
+
+const removeAccent = (str: string) =>
+  str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const AlwaysOnHandCard = ({
+  onHeightMeasured,
+}: {
+  onHeightMeasured?: (h: number) => void;
+}) => {
+  const { activeIds, toggle } = useAlwaysOnHand();
+
+  return (
+    <View
+      style={styles.staplesCard}
+      onLayout={(e) => onHeightMeasured?.(e.nativeEvent.layout.height)}
+    >
+      <View style={styles.staplesHeader}>
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text style={styles.staplesTitle}>Always on hand</Text>
+          <Text style={styles.staplesSubtitle}>
+            Ingrédients de base toujours disponibles. Désactive ceux qu'il
+            t'arrive de manquer — les recettes en tiendront compte.
+          </Text>
+        </View>
+        <Text style={styles.staplesCount}>
+          {activeIds.length} sur {staples.length}
+        </Text>
+      </View>
+
+
+      <View style={styles.staplesRow}>
+        {staples.map((staple) => {
+          const active = activeIds.includes(staple.id);
+          return (
+            <Pressable
+              key={staple.id}
+              onPress={() => toggle(staple.id)}
+              style={[styles.staplePill, active && styles.staplePillActive]}
+            >
+              <View
+                style={[
+                  styles.staplesCheck,
+                  active && styles.staplesCheckActive,
+                ]}
+              >
+                {active && <Text style={styles.staplesCheckMark}>✓</Text>}
+              </View>
+              <Text
+                style={[
+                  styles.staplesLabel,
+                  active && styles.staplesLabelActive,
+                ]}
+              >
+                {staple.name}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+export default function HomeScreen() {
+  const [search, setSearch] = useState("");
+  const flatListRef = useRef<FlatList>(null);
+
+  // Drives the alphabet wave (bold letter + neighbors fading out)
+  const activeIndex = useRef(new Animated.Value(-100)).current;
+  // While true, list-driven updates to activeIndex are suppressed so a
+  // sidebar drag isn't fought over by the scroll listener
+  const isDraggingSidebar = useRef(false);
+
+  // Absolute screen Y of the alphabet sidebar's top edge. We use this with
+  // pageY (screen-absolute) instead of locationY, because locationY is
+  // relative to whichever child (a specific letter's Animated.Text)
+  // actually received the touch — not to the sidebar container — so it
+  // gives inconsistent results depending on which letter you tap/land on.
+  const alphabetContainerRef = useRef<View>(null);
+  const alphabetContainerPageY = useRef(0);
+
+  // Measured height of the "Always on hand" header block (+ its wrapper
+  // margins), so offset math below stays accurate regardless of how many
+  // staples are active / how many rows they wrap onto.
+  const listHeaderHeight = useRef(0);
+
+  const fuse = useMemo(
+    () =>
+      new Fuse(items, {
+        keys: ["name"],
+        threshold: 0.3,
+      }),
+    []
+  );
+
+  const groupedItems = useMemo(() => {
+    return Object.values(
+      items.reduce((groups: any, item) => {
+        const letter = removeAccent(item.name[0].toUpperCase());
+
+        if (!groups[letter]) {
+          groups[letter] = { type: "header", letter, id: `header-${letter}` };
+        }
+        if (!groups[letter + "-items"]) {
+          groups[letter + "-items"] = [];
+        }
+        // `letter` is carried on every item too, so the FlatList's
+        // viewability callback can tell which section is on screen even
+        // when the section header itself has scrolled out of view.
+        groups[letter + "-items"].push({ ...item, type: "item", letter });
+
+        return groups;
+      }, {})
+    ).flat();
+  }, []);
+
+  // Analytic top-offset (in px, relative to the start of the list content,
+  // i.e. AFTER the ListHeaderComponent) for each letter's header row.
+  // Because every row height is fixed by style, we can compute exactly
+  // where each letter lands without needing FlatList to have rendered/
+  // measured it yet — this is what lets us jump straight to any letter
+  // in one frame instead of falling back to an estimate that lands near A.
+  const letterOffsetsFromTop = useMemo(() => {
+    const map: Record<string, number> = {};
+    let offset = 0;
+    (groupedItems as any[]).forEach((entry) => {
+      if (entry.type === "header") {
+        map[entry.letter] = offset;
+        offset += HEADER_ROW_HEIGHT;
+      } else {
+        offset += ITEM_ROW_HEIGHT;
+      }
+    });
+    return map;
+  }, [groupedItems]);
+
+  const filteredItems = search
+    ? fuse.search(search).map((result) => ({ ...result.item, type: "item" }))
+    : groupedItems;
+
+  const totalItems = items.length;
+  const totalUnits = items.reduce((sum, i) => sum + (i.quantity || 0), 0);
+  const lowStock = items.filter((i) => i.quantity <= 1).length;
+
+  const scrollToLetter = (letter: string) => {
+    let target: string | undefined = letter;
+
+    if (!(target in letterOffsetsFromTop)) {
+      const letterIdx = alphabet.indexOf(letter);
+      target = undefined;
+      for (let d = 1; d < alphabet.length && !target; d++) {
+        const up = alphabet[letterIdx + d];
+        const down = alphabet[letterIdx - d];
+        if (up && up in letterOffsetsFromTop) target = up;
+        else if (down && down in letterOffsetsFromTop) target = down;
+      }
+    }
+
+    if (target && flatListRef.current) {
+      // No header row is prepended when searching (ListHeaderComponent is
+      // null in that case), so only add its height when it's present.
+      const headerHeight = search ? 0 : listHeaderHeight.current;
+      const offset = headerHeight + letterOffsetsFromTop[target];
+      flatListRef.current.scrollToOffset({ offset, animated: true });
+    }
+  };
+
+  const handleSidebarTouch = (evt: any) => {
+    isDraggingSidebar.current = true;
+    // pageY is the touch's absolute position on screen, so subtracting the
+    // container's own absolute top edge gives a position that's always
+    // correct relative to the sidebar — whether the touch landed on a
+    // single tapped letter or moved there via a swipe.
+    const y = evt.nativeEvent.pageY - alphabetContainerPageY.current;
+    let index = Math.floor(y / LETTER_HEIGHT);
+    index = Math.max(0, Math.min(alphabet.length - 1, index));
+    activeIndex.setValue(index); // instant feedback while dragging/tapping
+    scrollToLetter(alphabet[index]);
+  };
+
+  const measureAlphabetContainer = () => {
+    // Re-measure on every touch start (cheap, native call) rather than
+    // relying solely on onLayout, so rotations/keyboard-driven layout
+    // shifts can't leave a stale offset behind.
+    alphabetContainerRef.current?.measure((_x, _y, _w, _h, pageX, pageY) => {
+      alphabetContainerPageY.current = pageY;
+    });
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        // measure() is async, so do it synchronously via onLayout's cached
+        // value first, then handle the touch — re-measuring here keeps it
+        // fresh for the *next* touch without delaying this one.
+        handleSidebarTouch(evt);
+        measureAlphabetContainer();
+      },
+      onPanResponderMove: handleSidebarTouch,
+      onPanResponderRelease: () => {
+        isDraggingSidebar.current = false;
+        // no reset here — the list's own scroll position (from
+        // scrollToLetter above) takes over via onViewableItemsChanged
+      },
+      onPanResponderTerminate: () => {
+        isDraggingSidebar.current = false;
+      },
+    })
+  ).current;
+
+  // Keeps the bold letter synced to whatever section is actually visible,
+  // so scrolling the list itself (not just dragging the sidebar) keeps
+  // the highlight accurate — starting from wherever you last navigated to
+  // instead of resetting to the top.
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: any[] }) => {
+      if (isDraggingSidebar.current || !viewableItems.length) return;
+      const topItem = viewableItems[0].item;
+      const idx = alphabet.indexOf(topItem?.letter);
+      if (idx !== -1) {
+        Animated.timing(activeIndex, {
+          toValue: idx,
+          duration: 120,
+          useNativeDriver: false,
+        }).start();
+      }
+    }
+  ).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 1,
+  }).current;
+
+  const renderItem = ({ item }: any) => {
+    if (item.type === "header") {
+      return <Text style={styles.letterHeader}>{item.letter}</Text>;
+    }
+
+    return (
+      <View style={styles.card}>
+        <View>
+          <Text style={styles.title}>{item.name}</Text>
+          <Text style={styles.subtitle}>{item.location}</Text>
+        </View>
+        <View style={styles.quantityPill}>
+          <Text style={styles.quantity}>{item.quantity}</Text>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.page}>
+      <View style={styles.header}>
+        <Text style={styles.eyebrow}>KITCHEN INVENTORY</Text>
+        <Text style={styles.pageTitle}>Your items</Text>
+        <Text style={styles.pageSubtitle}>Everything currently in your kitchen.</Text>
+      </View>
+
+      <View style={styles.statsCard}>
+        <View style={styles.statBlock}>
+          <Text style={styles.statNumber}>{totalItems}</Text>
+          <Text style={styles.statLabel}>Items</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statBlock}>
+          <Text style={styles.statNumber}>{totalUnits}</Text>
+          <Text style={styles.statLabel}>Total units</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statBlock}>
+          <Text style={[styles.statNumber, lowStock > 0 && styles.statNumberWarn]}>
+            {lowStock}
+          </Text>
+          <Text style={styles.statLabel}>Running low</Text>
+        </View>
+      </View>
+
+      <TextInput
+        style={styles.search}
+        placeholder="Recherche..."
+        placeholderTextColor="#A6A6A0"
+        value={search}
+        onChangeText={setSearch}
+      />
+
+      {/* Sidebar stays fixed outside the FlatList — it never scrolls away,
+          only the card + ingredients inside the FlatList do. */}
+      <View style={styles.container}>
+        <View
+          ref={alphabetContainerRef}
+          style={styles.alphabetContainer}
+          onLayout={measureAlphabetContainer}
+          {...panResponder.panHandlers}
+        >
+          {alphabet.map((letter, index) => {
+            const distance = Animated.subtract(activeIndex, index);
+
+            const scale = distance.interpolate({
+              inputRange: [-3, -2, -1, 0, 1, 2, 3],
+              outputRange: [1, 1.15, 1.4, 1.75, 1.4, 1.15, 1],
+              extrapolate: "clamp",
+            });
+
+            const color = distance.interpolate({
+              inputRange: [-3, -2, -1, 0, 1, 2, 3],
+              outputRange: [
+                "#C7C7BF",
+                "#9C9C93",
+                "#5C5C55",
+                "#000000",
+                "#5C5C55",
+                "#9C9C93",
+                "#C7C7BF",
+              ],
+              extrapolate: "clamp",
+            });
+
+            return (
+              <Animated.Text
+                key={letter}
+                style={[styles.letterIndex, { color, transform: [{ scale }] }]}
+              >
+                {letter}
+              </Animated.Text>
+            );
+          })}
+        </View>
+
+        <FlatList
+          ref={flatListRef}
+          data={filteredItems}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+          style={styles.list}
+          ListHeaderComponent={
+            search
+              ? null
+              : () => (
+                  <AlwaysOnHandCard
+                    onHeightMeasured={(h) => {
+                      // + staplesHeaderWrapper margins (marginTop 14 + marginBottom 4)
+                      listHeaderHeight.current = h + 18;
+                    }}
+                  />
+                )
+          }
+          ListHeaderComponentStyle={styles.staplesHeaderWrapper}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+        />
+      </View>
+    </View>
+  );
+}
+
+const GREEN = "#3E9C5C";
+const BG = "#F7F6F3";
+const CARD_BG = "#FFFFFF";
+const TEXT_MUTED = "#8E8E86";
+const WARN = "#E0A458";
+
+const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: BG, paddingTop: 55 },
+  header: { paddingHorizontal: 20, marginBottom: 18 },
+  eyebrow: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: GREEN,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  pageTitle: { fontSize: 34, fontWeight: "800", color: "#1C1C1A" },
+  pageSubtitle: { fontSize: 15, color: TEXT_MUTED, marginTop: 4 },
+
+  statsCard: {
+    flexDirection: "row",
+    backgroundColor: CARD_BG,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    paddingVertical: 20,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  statBlock: { flex: 1, alignItems: "center" },
+  statDivider: { width: 1, height: 34, backgroundColor: "#EDEDE8" },
+  statNumber: { fontSize: 24, fontWeight: "800", color: "#1C1C1A" },
+  statNumberWarn: { color: WARN },
+  statLabel: { fontSize: 13, color: TEXT_MUTED, marginTop: 4 },
+  search: {
+    height: 46,
+    marginHorizontal: 20,
+    marginTop: 18,
+    marginBottom: 6,
+    borderRadius: 14,
+    backgroundColor: CARD_BG,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#EDEDE8",
+  },
+  staplesHeaderWrapper: {
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  staplesCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 20,
+    // no marginHorizontal here — horizontal padding now comes from the
+    // FlatList's row container (styles.container), so it lines up with
+    // the item cards below it
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#EFEFEA",
+  },
+  staplesHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+  staplesTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1C1C1A",
+    marginBottom: 4,
+  },
+  staplesSubtitle: { fontSize: 13, color: TEXT_MUTED, lineHeight: 18 },
+  staplesCount: { fontSize: 13, fontWeight: "700", color: GREEN },
+  staplesRow: { flexDirection: "row", flexWrap: "wrap" },
+  staplePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E4E4DE",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: BG,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  staplePillActive: { borderColor: GREEN, backgroundColor: "#EEF6F0" },
+  staplesCheck: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#C7C7BF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 7,
+  },
+  staplesCheckActive: { borderColor: GREEN, backgroundColor: GREEN },
+  staplesCheckMark: { fontSize: 10, color: "#FFFFFF", fontWeight: "800" },
+  staplesLabel: { fontSize: 14, color: TEXT_MUTED, fontWeight: "600" },
+  staplesLabelActive: { color: "#1C1C1A", fontWeight: "600" },
+  container: {
+    flex: 1,
+    flexDirection: "row",
+    paddingHorizontal: horizontalPadding,
+    marginTop: 10,
+  },
+  list: { flex: 1, marginLeft: 15 },
+  card: {
+    backgroundColor: CARD_BG,
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#EFEFEA",
+  },
+  title: { fontSize: 20, fontWeight: "700", color: "#1C1C1A" },
+  subtitle: { fontSize: 14, color: TEXT_MUTED, marginTop: 3 },
+  quantityPill: {
+    backgroundColor: "#EEF6F0",
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+  },
+  quantity: { fontSize: 20, fontWeight: "700", color: GREEN },
+  alphabetContainer: {
+    justifyContent: "center",
+    paddingTop: 4,
+    // Extra bottom space so the full A–Z run clears the tab/nav bar
+    // instead of the last few letters sitting underneath it.
+    paddingBottom: 70,
+  },
+  letterIndex: {
+    fontSize: 11,
+    fontWeight: "700",
+    height: LETTER_HEIGHT,
+    lineHeight: LETTER_HEIGHT,
+    width: 16,
+    textAlign: "center",
+  },
+  letterHeader: {
+    paddingVertical: 4,
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1C1C1A",
+    marginVertical: 8,
+    marginLeft: 5,
+  },
+});
