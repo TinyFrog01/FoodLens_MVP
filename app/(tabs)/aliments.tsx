@@ -1,5 +1,6 @@
 import { items } from "@/app/Food/data/items";
 import { staples } from "@/app/Food/data/staples";
+import AvatarButton from "@/components/account/AvatarButton";
 import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
 import Fuse from "fuse.js";
 import React, { useMemo, useRef, useState } from "react";
@@ -288,6 +289,9 @@ export default function HomeScreen() {
   return (
     <View style={styles.page}>
       <View style={styles.header}>
+        <View style={styles.headerAvatar}>
+          <AvatarButton />
+        </View>
         <Text style={styles.eyebrow}>KITCHEN INVENTORY</Text>
         <Text style={styles.pageTitle}>Your items</Text>
         <Text style={styles.pageSubtitle}>Everything currently in your kitchen.</Text>
@@ -401,6 +405,7 @@ const WARN = "#E0A458";
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: BG, paddingTop: 55 },
   header: { paddingHorizontal: 20, marginBottom: 18 },
+  headerAvatar: { position: "absolute", top: 0, right: 20, zIndex: 1 },
   eyebrow: {
     fontSize: 13,
     fontWeight: "700",

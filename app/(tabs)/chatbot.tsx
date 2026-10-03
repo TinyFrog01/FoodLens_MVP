@@ -9,7 +9,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import AvatarButton from "@/components/account/AvatarButton";
+import { useAccount } from "@/context/AccountContext";
+
 export default function HomeScreen() {
+  const { account } = useAccount();
+  const greeting = account ? `Bonjour ${account.self.name} !` : "Bonjour !";
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Top Bar */}
@@ -24,7 +30,9 @@ export default function HomeScreen() {
           <Ionicons name="settings-outline" size={22} color="#222" />
         </TouchableOpacity>
 
-        <View style={styles.avatar} />
+        <View style={styles.avatar}>
+          <AvatarButton />
+        </View>
       </View>
 
       {/* Greeting */}
@@ -32,7 +40,7 @@ export default function HomeScreen() {
         
 
         <Text style={styles.description}>
-          Bonjour ___ Vous pouvez créer des recettes. Prendre une photo pour demander des
+          {greeting} Vous pouvez créer des recettes. Prendre une photo pour demander des
           éléments spécifiques ou simplement demander une recette avec des
           contraintes spéciales.
         </Text>
@@ -79,10 +87,6 @@ const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#7ED67A",
     marginLeft: 10,
   },
 

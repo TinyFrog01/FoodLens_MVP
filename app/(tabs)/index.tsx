@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -8,13 +8,19 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getRecipePhoto } from "@/app/Food/data/recipe/photos";
 
 import { items } from "@/app/Food/data/items";
-import { Recipe, recipes } from "@/app/Food/data/recipe/recipe";
+import AvatarButton from "@/components/account/AvatarButton";
+import { CookingForPill, CookingForSheet } from "@/components/account/CookingFor";
+import { applianceLabel } from "@/constants/dietary";
+import { useAccount } from "@/context/AccountContext";
+import { useRecipeFeed } from "@/hooks/useRecipeFeed";
+import { RecipeVerdict, displayDiets } from "@/lib/account/recipeFilter";
 
 const { height, width } = Dimensions.get("window");
 
@@ -89,13 +95,59 @@ const isIngredientAvailable = (ingredientName: string) => {
 /* ---------------- CARD ---------------- */
 
 
+/* Pastilles personnelles : ce que quelqu'un n'aime pas, l'appareil qui
+   manque, ce que quelqu'un aime (2 au maximum). */
+const getFlags = (verdict: RecipeVerdict) => {
+  const flags: {
+    key: string;
+    text: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    color: string;
+  }[] = [];
+
+  verdict.dislikes.forEach(({ person, term }) =>
+    flags.push({
+      key: `dislike-${person}-${term}`,
+      text: `${person} n'aime pas : ${term}`,
+      icon: "thumbs-down-outline",
+      color: "rgba(217,119,6,0.92)",
+    })
+  );
+
+  if (verdict.missingAppliances.length > 0) {
+    flags.push({
+      key: "appliance",
+      text: `Nécessite : ${verdict.missingAppliances.map(applianceLabel).join(", ")}`,
+      icon: "alert-circle-outline",
+      color: "rgba(0,0,0,0.6)",
+    });
+  }
+
+  verdict.likes.forEach(({ person, term }) =>
+    flags.push({
+      key: `like-${person}-${term}`,
+      text: `${person} aime : ${term}`,
+      icon: "heart",
+      color: "rgba(24,166,75,0.92)",
+    })
+  );
+
+  return flags.slice(0, 2);
+};
+
+
+
 const RecipeCard = ({
-  item,
+  verdict,
   onPress,
 }: {
-  item: Recipe;
+  verdict: RecipeVerdict;
   onPress: () => void;
 }) => {
+
+  const item = verdict.recipe;
+  const flags = getFlags(verdict);
+  const diets = displayDiets(item).slice(0, 3);
 
 
   const available = item.ingredients.filter((ingredient) =>
@@ -143,9 +195,40 @@ const RecipeCard = ({
       <View style={styles.content}>
 
 
+        {/* PERSONAL FLAGS */}
+
+        {flags.length > 0 && (
+          <View style={styles.flags}>
+            {flags.map((flag) => (
+              <View
+                key={flag.key}
+                style={[styles.flag, { backgroundColor: flag.color }]}
+              >
+                <Ionicons name={flag.icon} size={13} color="#fff" />
+                <Text style={styles.flagText}>{flag.text}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+
         <Text style={styles.title}>
           {item.title}
         </Text>
+
+
+
+        {/* DIET TAGS */}
+
+        {diets.length > 0 && (
+          <View style={styles.diets}>
+            {diets.map((diet) => (
+              <View key={diet} style={styles.dietChip}>
+                <Text style={styles.dietText}>{diet}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
 
 
@@ -283,48 +366,111 @@ export default function RecipeFeed(){
 
 
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { account } = useAccount();
+
+  // Recettes filtrées pour les personnes choisies (tout, en mode invité)
+  const { visible } = useRecipeFeed();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const isEmpty = visible.length === 0;
 
 
 
   return (
 
-    <FlatList
+    <View style={styles.page}>
 
-      data={recipes}
+      {isEmpty ? (
+
+        <View style={styles.empty}>
+          <MaterialCommunityIcons
+            name="food-off-outline"
+            size={64}
+            color="#BFBFBF"
+          />
+          <Text style={styles.emptyTitle}>
+            Aucune recette ne convient
+          </Text>
+          <Text style={styles.emptyText}>
+            Les régimes, allergies, appareils ou le temps maximum des
+            personnes choisies masquent toutes les recettes.
+          </Text>
+          <TouchableOpacity
+            style={styles.emptyButton}
+            onPress={() => setSheetOpen(true)}
+          >
+            <Text style={styles.emptyButtonText}>
+              Changer pour qui je cuisine
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push("/profile")}>
+            <Text style={styles.emptyLink}>Modifier mes préférences</Text>
+          </TouchableOpacity>
+        </View>
+
+      ) : (
+
+        <FlatList
+
+          data={visible}
 
 
-      keyExtractor={(item)=>item.id}
+          keyExtractor={(item)=>item.recipe.id}
 
 
-      renderItem={({item})=>(
+          renderItem={({item})=>(
 
-        <RecipeCard
+            <RecipeCard
 
-          item={item}
+              verdict={item}
 
-          onPress={()=>
-            router.push(
-              `/recipe/${item.id}`
-            )
-          }
+              onPress={()=>
+                router.push(
+                  `/recipe/${item.recipe.id}`
+                )
+              }
+
+            />
+
+          )}
+
+
+          pagingEnabled
+
+
+          snapToInterval={height}
+
+
+          decelerationRate="fast"
+
+
+          showsVerticalScrollIndicator={false}
 
         />
 
       )}
 
 
-      pagingEnabled
+
+      {/* TOP BAR : pour qui je cuisine + compte */}
+
+      <View
+        style={[styles.topBar, { top: insets.top + 8 }]}
+        pointerEvents="box-none"
+      >
+        <CookingForPill onPress={() => setSheetOpen(true)} />
+        <AvatarButton onDark={!isEmpty} />
+      </View>
 
 
-      snapToInterval={height}
+      {account && (
+        <CookingForSheet
+          visible={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+        />
+      )}
 
-
-      decelerationRate="fast"
-
-
-      showsVerticalScrollIndicator={false}
-
-    />
+    </View>
 
   );
 
@@ -338,6 +484,138 @@ export default function RecipeFeed(){
 
 
 const styles = StyleSheet.create({
+
+
+  page:{
+    flex:1,
+    backgroundColor:"#F7F6F3",
+  },
+
+
+
+  topBar:{
+    position:"absolute",
+    left:16,
+    right:16,
+    flexDirection:"row",
+    justifyContent:"space-between",
+    alignItems:"center",
+  },
+
+
+
+  flags:{
+    flexDirection:"row",
+    flexWrap:"wrap",
+    marginBottom:10,
+  },
+
+
+
+  flag:{
+    flexDirection:"row",
+    alignItems:"center",
+    paddingHorizontal:10,
+    paddingVertical:5,
+    borderRadius:20,
+    marginRight:8,
+    marginBottom:6,
+  },
+
+
+
+  flagText:{
+    color:"#fff",
+    fontSize:12,
+    fontWeight:"800",
+    marginLeft:5,
+  },
+
+
+
+  diets:{
+    flexDirection:"row",
+    flexWrap:"wrap",
+    marginTop:10,
+  },
+
+
+
+  dietChip:{
+    backgroundColor:"rgba(255,255,255,0.2)",
+    borderWidth:1,
+    borderColor:"rgba(255,255,255,0.45)",
+    paddingHorizontal:10,
+    paddingVertical:4,
+    borderRadius:20,
+    marginRight:6,
+    marginBottom:4,
+  },
+
+
+
+  dietText:{
+    color:"#fff",
+    fontSize:12,
+    fontWeight:"700",
+  },
+
+
+
+  empty:{
+    flex:1,
+    alignItems:"center",
+    justifyContent:"center",
+    paddingHorizontal:32,
+  },
+
+
+
+  emptyTitle:{
+    fontSize:24,
+    fontWeight:"800",
+    color:"#1C1C1A",
+    marginTop:18,
+    textAlign:"center",
+  },
+
+
+
+  emptyText:{
+    fontSize:15,
+    color:"#8E8E86",
+    marginTop:8,
+    textAlign:"center",
+    lineHeight:21,
+  },
+
+
+
+  emptyButton:{
+    marginTop:24,
+    backgroundColor:"#111",
+    paddingVertical:14,
+    paddingHorizontal:26,
+    borderRadius:30,
+  },
+
+
+
+  emptyButtonText:{
+    color:"#fff",
+    fontSize:16,
+    fontWeight:"700",
+  },
+
+
+
+  emptyLink:{
+    marginTop:16,
+    color:"#3E9C5C",
+    fontSize:15,
+    fontWeight:"700",
+  },
+
 
 
   card:{

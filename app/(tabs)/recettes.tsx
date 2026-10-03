@@ -16,6 +16,7 @@ import {
 } from "react-native";
 
 import CompletionBar from "@/components/CompletionBar";
+import AvatarButton from "@/components/account/AvatarButton";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -359,6 +360,9 @@ export default function Recette() {
       }}
     >
       <View style={styles.header}>
+        <View style={styles.headerAvatar}>
+          <AvatarButton />
+        </View>
         <Text style={styles.eyebrow}>KITCHEN INVENTORY</Text>
         <Text style={styles.pageTitle}>Your food photos</Text>
         <Text style={styles.pageSubtitle}>
@@ -422,6 +426,7 @@ const WARN = "#E0A458";
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, marginBottom: 18 },
+  headerAvatar: { position: "absolute", top: 0, right: 20, zIndex: 1 },
   eyebrow: {
     fontSize: 13,
     fontWeight: "700",

@@ -1,9 +1,16 @@
+import type { AllergenKey, ApplianceKey, DietKey } from "@/constants/dietary";
+
 export interface Recipe {
   id: string;
   title: string;
   image: string;
   time: string;
   vegan: boolean;
+  // Régimes compatibles, allergènes présents et appareils nécessaires :
+  // servent à filtrer les recettes selon le compte (voir lib/account).
+  diets: DietKey[];
+  allergens: AllergenKey[];
+  appliances: ApplianceKey[];
   servings?: number;
   ingredientsAvailable?: string;
   ingredients: {
@@ -23,6 +30,9 @@ export const recipes: Recipe[] = [
   image: "app/Food/data/recipe/photos/une-tasse-de-the.jpeg",
   time: "15 min",
   vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: [],
+  appliances: ["kettle"],
   servings: 1,
 
   ingredients: [
@@ -77,6 +87,9 @@ export const recipes: Recipe[] = [
   image: "...",
   time: "3 h",
   vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["gluten"],
+  appliances: ["stovetop"],
   servings: 6,
   
   ingredients: [
@@ -216,6 +229,9 @@ export const recipes: Recipe[] = [
     image: "",
     time: "35 min",
     vegan: false,
+    diets: ["vegetarian", "pescatarian", "pork-free"],
+    allergens: ["gluten", "milk"],
+    appliances: ["oven", "stovetop"],
     servings: 25,
   
     ingredients: [
@@ -279,6 +295,9 @@ export const recipes: Recipe[] = [
     image: "",
     time: "45 min",
     vegan: false,
+    diets: ["vegetarian", "pescatarian", "pork-free"],
+    allergens: ["milk", "eggs", "gluten"],
+    appliances: ["oven"],
     servings: 6,
   
     ingredients: [
@@ -348,6 +367,9 @@ export const recipes: Recipe[] = [
     image: "",
     time: "30 min",
     vegan: false,
+    diets: ["vegetarian", "pescatarian", "pork-free"],
+    allergens: ["gluten", "milk"],
+    appliances: ["oven"],
   
     ingredients: [
       {
@@ -405,6 +427,9 @@ export const recipes: Recipe[] = [
     image: "",
     time: "1 h 45 min",
     vegan: false,
+    diets: [],
+    allergens: ["gluten", "milk"],
+    appliances: ["oven"],
     servings: 8,
   
     ingredients: [
@@ -502,6 +527,9 @@ export const recipes: Recipe[] = [
     image: "",
     time: "1 h 20 min",
     vegan: false,
+    diets: ["vegetarian", "pescatarian", "pork-free"],
+    allergens: ["gluten", "milk", "tree-nuts", "sulfites"],
+    appliances: ["oven"],
     servings: 10,
   
     ingredients: [
@@ -599,6 +627,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h",
   vegan: false,
+  diets: [],
+  allergens: ["milk", "gluten", "eggs"],
+  appliances: ["stovetop"],
   servings: 4,
 
   ingredients: [
@@ -690,6 +721,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h",
   vegan: false,
+  diets: ["gluten-free", "dairy-free", "pork-free"],
+  allergens: [],
+  appliances: ["stovetop"],
   servings: 6,
 
   ingredients: [
@@ -792,6 +826,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h 20 min",
   vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["soy", "gluten", "mustard"],
+  appliances: ["grill", "blender", "stovetop"],
   servings: 4,
 
   ingredients: [
@@ -893,6 +930,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "15 min",
   vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["soy", "sesame", "gluten"],
+  appliances: ["stovetop"],
   servings: 4,
 
   ingredients: [
@@ -960,6 +1000,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "7 h",
   vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["gluten"],
+  appliances: ["oven"],
   servings: 1,
 
   ingredients: [
@@ -1028,6 +1071,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "2 h",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "tree-nuts", "milk"],
+  appliances: ["oven", "stovetop"],
 
   ingredients: [
     {
@@ -1104,6 +1150,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h 30 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs"],
+  appliances: ["oven"],
   servings: 9,
 
   ingredients: [
@@ -1186,6 +1235,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "eggs", "milk", "soy"],
+  appliances: ["oven"],
   servings: 12,
 
   ingredients: [
@@ -1249,6 +1301,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "40 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["eggs", "milk", "gluten", "tree-nuts"],
+  appliances: ["oven"],
   servings: 20,
 
   ingredients: [
@@ -1331,6 +1386,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "2 h",
   vegan: false,
+  diets: ["gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: [],
+  appliances: ["oven", "microwave"],
   servings: 4,
 
   ingredients: [
@@ -1399,6 +1457,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "10 min",
   vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: [],
+  appliances: [],
   servings: 0,
 
   ingredients: [
@@ -1445,6 +1506,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk"],
+  appliances: ["stovetop"],
   servings: 4,
 
   ingredients: [
@@ -1525,6 +1589,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "2 h 30 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["gluten", "eggs"],
+  appliances: ["oven"],
   servings: 8,
 
   ingredients: [
@@ -1599,6 +1666,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 min",
   vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["gluten"],
+  appliances: ["stovetop"],
   ingredients: [
     {
       name: "huile d'avocat",
@@ -1684,6 +1754,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 min",
   vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["gluten"],
+  appliances: ["stovetop"],
   servings: 4,
 
   ingredients: [
@@ -1756,6 +1829,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 min",
   vegan: false,
+  diets: ["pork-free"],
+  allergens: ["gluten", "milk"],
+  appliances: ["stovetop"],
   servings: 4,
 
   ingredients: [
@@ -1844,6 +1920,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 min",
   vegan: false,
+  diets: ["pork-free"],
+  allergens: ["gluten", "tree-nuts", "eggs", "milk"],
+  appliances: ["stovetop"],
   servings: 4,
 
   ingredients: [
@@ -1898,6 +1977,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "15 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free"],
+  allergens: ["milk", "sulfites"],
+  appliances: ["stovetop", "oven"],
   servings: 4,
 
   ingredients: [
@@ -1943,6 +2025,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h 30 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["milk", "eggs", "tree-nuts", "gluten"],
+  appliances: ["oven"],
   servings: 1,
 
   ingredients: [
@@ -2005,6 +2090,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "40 minutes",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["milk", "eggs", "gluten", "tree-nuts"],
+  appliances: ["oven"],
   servings: 8,
   ingredients: [
     { name: "beurre", quantity: 170, unit: "g" },
@@ -2035,6 +2123,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "25 minutes",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free", "low-carb"],
+  allergens: ["milk"],
+  appliances: ["stovetop"],
   servings: 6,
   ingredients: [
     { name: "crème 35%", quantity: 400, unit: "ml" },
@@ -2061,6 +2152,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "14 h 45 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["eggs", "milk", "gluten"],
+  appliances: ["oven"],
   servings: 7,
   ingredients: [
     { name: "œufs", quantity: 6, unit: "" },
@@ -2097,6 +2191,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "3h",
   vegan: false,
+  diets: ["gluten-free", "dairy-free"],
+  allergens: [],
+  appliances: ["stovetop"],
   servings: 6,
   ingredients: [
     { name: "pommes", quantity: 450, unit: "g" },
@@ -2123,6 +2220,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["eggs", "gluten", "tree-nuts"],
+  appliances: ["oven"],
   servings: 8,
   ingredients: [
     { name: "sucre blanc", quantity: 150, unit: "g" },
@@ -2150,6 +2250,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free", "low-carb"],
+  allergens: ["milk"],
+  appliances: ["stovetop", "blender"],
   servings: 4,
   ingredients: [
     {
@@ -2211,6 +2314,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "7 h 30 min",
   vegan: false,
+  diets: ["gluten-free", "dairy-free"],
+  allergens: [],
+  appliances: ["oven", "stovetop"],
 
   ingredients: [
     { name: "côtes levées de porc", quantity: 2, unit: "" },
@@ -2249,6 +2355,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "20 minutes",
   vegan: false,
+  diets: ["pescatarian", "gluten-free", "dairy-free", "pork-free"],
+  allergens: ["fish", "mustard"],
+  appliances: ["stovetop"],
   servings: 2,
   ingredients: [
     { name: "haricots en conserve", quantity: 240, unit: "g" },
@@ -2273,6 +2382,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "55 minutes",
   vegan: false,
+  diets: [],
+  allergens: ["gluten", "milk", "eggs"],
+  appliances: ["oven"],
   servings: 4,
   ingredients: [
     { name: "pâte brisée", quantity: 225, unit: "g" },
@@ -2302,6 +2414,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 minutes",
   vegan: false,
+  diets: ["gluten-free", "dairy-free", "low-carb"],
+  allergens: ["eggs", "mustard"],
+  appliances: ["stovetop"],
   servings: 6,
   ingredients: [
     { name: "tomates", quantity: 6, unit: "" },
@@ -2333,6 +2448,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 heure",
   vegan: false,
+  diets: [],
+  allergens: ["milk", "eggs", "gluten", "mustard"],
+  appliances: ["oven"],
   servings: 6,
   ingredients: [
     {
@@ -2383,6 +2501,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "10 min",
   vegan: false,
+  diets: ["gluten-free", "low-carb"],
+  allergens: ["eggs", "milk"],
+  appliances: ["stovetop"],
   servings: 1,
   ingredients: [
     {
@@ -2427,6 +2548,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 minutes",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["milk", "gluten", "eggs"],
+  appliances: ["oven"],
   servings: 6,
   ingredients: [
     {
@@ -2471,6 +2595,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 minutes",
   vegan: false,
+  diets: ["gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: [],
+  appliances: ["oven"],
   servings: 4,
   ingredients: [
     { name: "Poitrines de poulet", quantity: 4, unit: "" },
@@ -2494,6 +2621,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "50 minutes",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free"],
+  allergens: ["eggs", "milk"],
+  appliances: ["oven", "stovetop"],
   servings: 6,
   ingredients: [
     { name: "Œufs", quantity: 4, unit: "" },
@@ -2522,6 +2652,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "40–45 minutes",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs"],
+  appliances: ["oven"],
   ingredients: [
     { name: "Flocons d'avoine", quantity: 720, unit: "g" },
     { name: "Cassonade", quantity: 240, unit: "g" },
@@ -2544,6 +2677,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 heure",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs"],
+  appliances: ["oven", "stovetop"],
   servings: 4,
   ingredients: [
     { name: "Penne", quantity: 125, unit: "g" },
@@ -2575,6 +2711,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 heure",
   vegan: false,
+  diets: ["gluten-free", "dairy-free"],
+  allergens: ["mustard"],
+  appliances: ["oven"],
   ingredients: [
     { name: "Côtelettes de porc", quantity: 4, unit: "" },
     { name: "Pomme", quantity: 1, unit: "" },
@@ -2599,6 +2738,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "5 min",
   vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: ["sulfites"],
+  appliances: [],
   ingredients: [
     {
       name: "vinaigre balsamique",
@@ -2634,6 +2776,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free"],
+  allergens: ["sulfites"],
+  appliances: ["blender", "stovetop"],
   ingredients: [
     {
       name: "vinaigre balsamique",
@@ -2693,6 +2838,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 min",
   vegan: false,
+  diets: ["pork-free"],
+  allergens: ["sulfites", "milk", "gluten"],
+  appliances: ["grill", "stovetop"],
   ingredients: [
     {
       name: "entrecôte",
@@ -2747,6 +2895,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["milk", "eggs", "gluten"],
+  appliances: ["stovetop"],
   ingredients: [
     {
       name: "beurre",
@@ -2814,6 +2965,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1h30",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs", "tree-nuts"],
+  appliances: ["oven", "stand-mixer"],
   servings: 8,
   ingredients: [
     { name: "farine", quantity: 250, unit: "g" },
@@ -2845,6 +2999,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "5 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free"],
+  allergens: ["milk", "eggs", "soy"],
+  appliances: [],
   servings: 1,
   ingredients: [
     { name: "banane", quantity: 1, unit: "" },
@@ -2868,6 +3025,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "20 min",
   vegan: false,
+  diets: ["pescatarian", "gluten-free", "pork-free"],
+  allergens: ["fish", "milk", "mustard"],
+  appliances: ["stovetop"],
   servings: 8,
   ingredients: [
     { name: "ketchup", quantity: 235, unit: "ml" },
@@ -2895,7 +3055,10 @@ export const recipes: Recipe[] = [
   title: "Pâte à pain de base",
   image: "",
   time: "3h",
-  vegan: true,
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["gluten"],
+  appliances: ["bread-machine", "oven"],
   servings: 1,
   ingredients: [
     { name: "Eau", quantity: 237, unit: "g" },
@@ -2920,6 +3083,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "45 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["milk", "gluten"],
+  appliances: ["oven"],
   servings: 6,
   ingredients: [
     { name: "Beurre", quantity: 115, unit: "g" },
@@ -2945,6 +3111,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["milk", "gluten"],
+  appliances: ["oven", "stovetop"],
   servings: 10,
   ingredients: [
     { name: "Cassonade", quantity: 110, unit: "g" },
@@ -2968,6 +3137,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["eggs", "milk", "gluten"],
+  appliances: ["oven", "stovetop"],
   servings: 6,
   ingredients: [
     { name: "œufs", quantity: 6, unit: "" },
@@ -2998,6 +3170,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "10 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: ["eggs", "mustard"],
+  appliances: [],
   ingredients: [
     { name: "jaunes d'œufs", quantity: 2, unit: "" },
     { name: "jus de citron", quantity: 12.5, unit: "ml" }, /*vinagire*/
@@ -3022,6 +3197,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "10 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: ["eggs"],
+  appliances: ["stovetop"],
   servings: 1,
   ingredients: [
     { name: "œufs", quantity: 2, unit: "" },
@@ -3047,6 +3225,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "5 min",
   vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: [],
+  appliances: [],
   servings: 1,
   ingredients: [
     { name: "bâtons de cannelle", quantity: 6, unit: "" },
@@ -3068,7 +3249,10 @@ export const recipes: Recipe[] = [
   title: "Pâte à pizza de base",
   image: "",
   time: "8 heures",
-  vegan: true,
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["gluten"],
+  appliances: ["oven"],
   servings: 8,
   ingredients: [
     { name: "Eau", quantity: 237, unit: "g" },
@@ -3097,7 +3281,10 @@ export const recipes: Recipe[] = [
   title: "Polenta de base",
   image: "",
   time: "1 h",
-  vegan: false,
+  vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free"],
+  allergens: [],
+  appliances: ["stovetop"],
   servings: 4,
   ingredients: [
     { name: "Eau", quantity: 750, unit: "ml" },/*lait*/
@@ -3121,6 +3308,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "10 minutes",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free", "low-carb"],
+  allergens: ["eggs", "milk"],
+  appliances: ["stovetop"],
   servings: 1,
   ingredients: [
     { name: "Oeufs", quantity: 3, unit: "" },
@@ -3147,6 +3337,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "20 min",
   vegan: false,
+  diets: ["vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["eggs", "gluten"],
+  appliances: ["stovetop"],
   servings: 6,
   ingredients: [
     { name: "oignon", quantity: 1, unit: "" },
@@ -3180,6 +3373,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "2h30",
   vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free"],
+  allergens: [],
+  appliances: ["stovetop"],
   servings: 4,
   ingredients: [
     { name: "haricots" , quantity: 454, unit: "g" },
@@ -3217,6 +3413,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "2 heures",
   vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["gluten", "fish"],
+  appliances: ["stovetop"],
   servings: 12,
   ingredients: [
     { name: "bœuf", quantity: 1250, unit: "g" },
@@ -3259,6 +3458,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "",
   vegan: false,
+  diets: ["gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: ["mustard"],
+  appliances: ["stovetop"],
   ingredients: [
     { name: "gésiers de poulet", quantity: 1000, unit: "g" },
     { name: "sel", quantity: 15, unit: "ml" },
@@ -3291,6 +3493,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "30 minutes",
   vegan: false,
+  diets: ["gluten-free", "pork-free", "low-carb"],
+  allergens: ["tree-nuts", "milk"],
+  appliances: ["stovetop"],
   ingredients: [
     { name: "filet de bœuf", quantity: 400, unit: "g" },
     { name: "huile d'olive", quantity: 90, unit: "ml" },
@@ -3316,6 +3521,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "1 h 30",
   vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["mustard", "gluten"],
+  appliances: ["stovetop"],
   servings: 4,
   ingredients: [
     { name: "Bœuf haché", quantity: 450, unit: "g" },
@@ -3351,6 +3559,9 @@ export const recipes: Recipe[] = [
   image: "",
   time: "8 h 30",
   vegan: false,
+  diets: ["gluten-free", "dairy-free", "pork-free"],
+  allergens: ["fish"],
+  appliances: ["oven"],
   ingredients: [
     { name: "Sel", quantity: 4, unit: "g" },
     { name: "Poivre", quantity: 0.5, unit: "g" },
