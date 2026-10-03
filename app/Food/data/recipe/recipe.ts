@@ -5,6 +5,7 @@ export interface Recipe {
   time: string;
   vegan: boolean;
   servings?: number;
+  ingredientsAvailable?: string;
   ingredients: {
     name: string;
     quantity: number;

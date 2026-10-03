@@ -59,7 +59,8 @@ export default function RecipeCard({
             />
 
             <Text style={styles.infoText}>
-              {recipe.ingredientsAvailable}
+              {recipe.ingredientsAvailable ??
+                `${recipe.ingredients.length} ingrédients`}
             </Text>
           </View>
 
