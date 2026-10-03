@@ -161,6 +161,10 @@ export default function Camera() {
   const savePhoto = async (category: CategoryKey) => {
     if (!photo) return;
 
+    // ✅ id de la photo enregistrée (nouvelle ou remplacée), transmis à
+    // l'écran Recettes pour qu'il affiche directement cette photo.
+    let savedId: string | undefined;
+
     try {
       const storedPhotos = await AsyncStorage.getItem("photos");
       const photos = storedPhotos ? JSON.parse(storedPhotos) : [];
@@ -179,6 +183,7 @@ export default function Camera() {
         const idx = photos.findIndex((p: any) => p.id === presetEditId);
 
         if (idx !== -1) {
+          savedId = presetEditId;
           photos[idx] = {
             ...photos[idx],
             uri: photo,
@@ -187,8 +192,9 @@ export default function Camera() {
           };
         } else {
           // Filet de sécurité si l'entrée d'origine a disparu entre-temps.
+          savedId = generateId();
           photos.push({
-            id: generateId(),
+            id: savedId,
             uri: photo,
             category,
             date: dateLabel,
@@ -196,8 +202,9 @@ export default function Camera() {
         }
       } else {
         // ✅ Nouvelle photo classique.
+        savedId = generateId();
         photos.push({
-          id: generateId(),
+          id: savedId,
           uri: photo,
           category,
           date: dateLabel,
@@ -213,7 +220,13 @@ export default function Camera() {
     setShowCategoryPicker(false);
     setPresetCategory(undefined);
     setPresetEditId(undefined);
-    router.back();
+
+    // ✅ Retour sur Recettes, positionné directement sur la photo prise
+    // (même si elle est tout en bas de la page, sans avoir à scroller).
+    router.navigate({
+      pathname: "/recettes",
+      params: savedId ? { highlightId: savedId } : {},
+    });
   };
 
   // ✅ appelé au clic sur "Use Photo"

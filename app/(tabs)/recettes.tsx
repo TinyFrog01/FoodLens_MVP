@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Dimensions,
   Image,
@@ -12,7 +18,7 @@ import {
 import CompletionBar from "@/components/CompletionBar";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useRouter } from "expo-router";
 
 const { width } = Dimensions.get("window");
@@ -111,6 +117,69 @@ export default function Recette() {
     return map;
   }, [photos]);
 
+  // ─────────────────────────────────────────────
+  // Positionnement direct sur une photo (ex: celle qu'on vient de prendre)
+  // ─────────────────────────────────────────────
+  // La caméra renvoie ici avec ?highlightId=<id>. On mémorise la position de
+  // chaque section / grille / card via onLayout, puis on place le scroll
+  // pour que la photo soit centrée à l'écran, sans animation.
+  const { highlightId } = useLocalSearchParams<{ highlightId?: string }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const layout = useRef({
+    viewportHeight: 0,
+    contentHeight: 0,
+    contentY: 0,
+    sectionY: {} as Partial<Record<CategoryKey, number>>,
+    gridY: {} as Partial<Record<CategoryKey, number>>,
+    cards: {} as Record<string, { y: number; height: number }>,
+  });
+  const scrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Les onLayout arrivent dans un ordre non garanti : on attend un court
+  // instant que toutes les positions soient à jour avant de calculer.
+  const scrollToHighlight = useCallback(() => {
+    if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    if (!highlightId) return;
+
+    scrollTimer.current = setTimeout(() => {
+      const l = layout.current;
+      const categoryKey = (Object.keys(photosByCategory) as CategoryKey[]).find(
+        (key) => photosByCategory[key].some((p) => p.id === highlightId)
+      );
+      if (!categoryKey) return; // photo pas encore chargée
+
+      const card = l.cards[highlightId];
+      const sectionY = l.sectionY[categoryKey];
+      const gridY = l.gridY[categoryKey];
+      if (!card || sectionY === undefined || gridY === undefined) return;
+
+      const cardTop = l.contentY + sectionY + gridY + card.y;
+      const target = cardTop - (l.viewportHeight - card.height) / 2;
+      const maxY = Math.max(0, l.contentHeight - l.viewportHeight);
+
+      scrollRef.current?.scrollTo({
+        y: Math.min(Math.max(0, target), maxY),
+        animated: false,
+      });
+
+      // On retire le paramètre pour ne pas re-scroller au prochain focus.
+      router.setParams({ highlightId: undefined });
+    }, 50);
+  }, [highlightId, photosByCategory, router]);
+
+  // Couvre le cas où aucun onLayout ne se redéclenche (ex: redo d'une photo
+  // qui garde la même place).
+  useEffect(() => {
+    scrollToHighlight();
+  }, [scrollToHighlight]);
+
+  useEffect(
+    () => () => {
+      if (scrollTimer.current) clearTimeout(scrollTimer.current);
+    },
+    []
+  );
+
   // Stats globales (haut de page)
   const totalItems = photos.reduce((sum, p) => sum + (p.itemsDetected ?? 9), 0);
   const totalNeedCheck = photos.reduce((sum, p) => sum + (p.needCheck ?? 2), 0);
@@ -143,6 +212,11 @@ export default function Recette() {
       <TouchableOpacity
         key={item.id}
         style={styles.card}
+        onLayout={(e) => {
+          const { y, height } = e.nativeEvent.layout;
+          layout.current.cards[item.id] = { y, height };
+          scrollToHighlight();
+        }}
         onPress={() =>
           router.push({
             pathname: "/photo-detail",
@@ -222,7 +296,14 @@ export default function Recette() {
     );
 
     return (
-      <View key={categoryKey} style={styles.section}>
+      <View
+        key={categoryKey}
+        style={styles.section}
+        onLayout={(e) => {
+          layout.current.sectionY[categoryKey] = e.nativeEvent.layout.y;
+          scrollToHighlight();
+        }}
+      >
         <View style={styles.sectionHeader}>
           <View style={styles.sectionIconWrap}>
             <MaterialCommunityIcons name={config.icon} size={20} color="#37B24D" />
@@ -248,7 +329,13 @@ export default function Recette() {
           </View>
         )}
 
-        <View style={styles.grid}>
+        <View
+          style={styles.grid}
+          onLayout={(e) => {
+            layout.current.gridY[categoryKey] = e.nativeEvent.layout.y;
+            scrollToHighlight();
+          }}
+        >
           {items.map((item, index) => renderPhotoCard(item, index))}
           {renderAddCard(categoryKey)}
         </View>
@@ -258,9 +345,18 @@ export default function Recette() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 100 }}
+      onLayout={(e) => {
+        layout.current.viewportHeight = e.nativeEvent.layout.height;
+        scrollToHighlight();
+      }}
+      onContentSizeChange={(_w, h) => {
+        layout.current.contentHeight = h;
+        scrollToHighlight();
+      }}
     >
       <View style={styles.header}>
         <Text style={styles.eyebrow}>KITCHEN INVENTORY</Text>
@@ -293,7 +389,13 @@ export default function Recette() {
           propre espacement horizontal (paddingHorizontal/marginHorizontal
           20), donc on ne veut pas leur ajouter le padding du container
           par-dessus. */}
-      <View style={styles.content}>
+      <View
+        style={styles.content}
+        onLayout={(e) => {
+          layout.current.contentY = e.nativeEvent.layout.y;
+          scrollToHighlight();
+        }}
+      >
         {photos.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="images-outline" size={70} color="#BFBFBF" />
