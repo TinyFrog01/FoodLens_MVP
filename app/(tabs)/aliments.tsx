@@ -2,6 +2,15 @@ import { items } from "@/app/Food/data/items";
 import { staples } from "@/app/Food/data/staples";
 import AvatarButton from "@/components/account/AvatarButton";
 import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
+import { usePhotos } from "@/hooks/usePhotos";
+import { normalizeName } from "@/lib/ingredientDetection";
+import {
+  CATEGORY_LABELS,
+  collectIngredients,
+  PhotoIngredient,
+  reviewItems,
+} from "@/lib/photoStore";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Fuse from "fuse.js";
 import React, { useMemo, useRef, useState } from "react";
 import {
@@ -32,23 +41,106 @@ type Item = {
   name: string;
   location: string;
   quantity: number;
+  // Vu sur au moins une photo (ic\u00f4ne appareil photo dans la liste).
+  fromPhoto?: boolean;
 };
 
 const removeAccent = (str: string) =>
   str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-const AlwaysOnHandCard = ({
-  onHeightMeasured,
-}: {
-  onHeightMeasured?: (h: number) => void;
-}) => {
+const categoriesLabel = (ingredient: PhotoIngredient) =>
+  ingredient.categories.map((c) => CATEGORY_LABELS[c]).join(", ");
+
+// \u2705 Ajoute \u00e0 l'inventaire les ingr\u00e9dients confirm\u00e9s sur les photos : +1 par
+// photo pour un aliment d\u00e9j\u00e0 list\u00e9, sinon une nouvelle entr\u00e9e rang\u00e9e selon
+// la cat\u00e9gorie de la photo. Tri\u00e9 pour que les lettres restent dans l'ordre.
+const mergeInventory = (base: Item[], detected: PhotoIngredient[]) => {
+  const merged = base.map((item) => ({ ...item }));
+
+  detected.forEach((ingredient) => {
+    const key = normalizeName(ingredient.name);
+    const existing = merged.find((item) => normalizeName(item.name) === key);
+
+    if (existing) {
+      existing.quantity += ingredient.refs.length;
+      existing.fromPhoto = true;
+      return;
+    }
+
+    merged.push({
+      id: `photo-${ingredient.key}`,
+      name: ingredient.name,
+      location: categoriesLabel(ingredient),
+      quantity: ingredient.refs.length,
+      fromPhoto: true,
+    });
+  });
+
+  return merged.sort((a, b) =>
+    normalizeName(a.name).localeCompare(normalizeName(b.name))
+  );
+};
+
+// \u2705 Ingr\u00e9dients vus sur les photos mais sous le seuil de confiance :
+// l'utilisateur les garde (ils rejoignent la liste) ou les retire.
+const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
+  if (ingredients.length === 0) return null;
+
+  return (
+    <View style={[styles.staplesCard, styles.reviewCard]}>
+      <View style={styles.staplesHeader}>
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text style={styles.staplesTitle}>To review</Text>
+          <Text style={styles.staplesSubtitle}>
+            {"Seen on your photos, but the AI isn't sure. Keep the ones you really have."}
+          </Text>
+        </View>
+        <Text style={[styles.staplesCount, styles.reviewCount]}>
+          {ingredients.length}
+        </Text>
+      </View>
+
+      {ingredients.map((ingredient, index) => (
+        <View
+          key={ingredient.key}
+          style={[styles.reviewRow, index > 0 && styles.reviewRowBorder]}
+        >
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={styles.reviewName} numberOfLines={1}>
+              {ingredient.name}
+            </Text>
+            <Text style={styles.reviewMeta} numberOfLines={1}>
+              {categoriesLabel(ingredient)}
+              {ingredient.confidence !== undefined
+                ? ` \u00b7 ${Math.round(ingredient.confidence * 100)}% sure`
+                : ""}
+            </Text>
+          </View>
+
+          <Pressable
+            style={styles.reviewRemove}
+            onPress={() => reviewItems(ingredient.refs, "remove").catch(console.error)}
+            accessibilityLabel={`Remove ${ingredient.name}`}
+          >
+            <Text style={styles.reviewRemoveText}>\u2715</Text>
+          </Pressable>
+          <Pressable
+            style={styles.reviewKeep}
+            onPress={() => reviewItems(ingredient.refs, "confirm").catch(console.error)}
+          >
+            <Text style={styles.reviewKeepText}>Keep</Text>
+          </Pressable>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+const AlwaysOnHandCard = () => {
   const { activeIds, toggle } = useAlwaysOnHand();
 
   return (
-    <View
-      style={styles.staplesCard}
-      onLayout={(e) => onHeightMeasured?.(e.nativeEvent.layout.height)}
-    >
+    <View style={styles.staplesCard}>
       <View style={styles.staplesHeader}>
         <View style={{ flex: 1, paddingRight: 12 }}>
           <Text style={styles.staplesTitle}>Always on hand</Text>
@@ -119,18 +211,26 @@ export default function HomeScreen() {
   // staples are active / how many rows they wrap onto.
   const listHeaderHeight = useRef(0);
 
+  // ✅ Inventaire = liste de base + ingrédients confirmés sur les photos.
+  const photos = usePhotos();
+  const photoIngredients = useMemo(() => collectIngredients(photos), [photos]);
+  const inventory = useMemo(
+    () => mergeInventory(items, photoIngredients.confirmed),
+    [photoIngredients]
+  );
+
   const fuse = useMemo(
     () =>
-      new Fuse(items, {
+      new Fuse(inventory, {
         keys: ["name"],
         threshold: 0.3,
       }),
-    []
+    [inventory]
   );
 
   const groupedItems = useMemo(() => {
     return Object.values(
-      items.reduce((groups: any, item) => {
+      inventory.reduce((groups: any, item) => {
         const letter = removeAccent(item.name[0].toUpperCase());
 
         if (!groups[letter]) {
@@ -147,7 +247,7 @@ export default function HomeScreen() {
         return groups;
       }, {})
     ).flat();
-  }, []);
+  }, [inventory]);
 
   // Analytic top-offset (in px, relative to the start of the list content,
   // i.e. AFTER the ListHeaderComponent) for each letter's header row.
@@ -173,9 +273,9 @@ export default function HomeScreen() {
     ? fuse.search(search).map((result) => ({ ...result.item, type: "item" }))
     : groupedItems;
 
-  const totalItems = items.length;
-  const totalUnits = items.reduce((sum, i) => sum + (i.quantity || 0), 0);
-  const lowStock = items.filter((i) => i.quantity <= 1).length;
+  const totalItems = inventory.length;
+  const totalUnits = inventory.reduce((sum, i) => sum + (i.quantity || 0), 0);
+  const lowStock = inventory.filter((i) => i.quantity <= 1).length;
 
   const scrollToLetter = (letter: string) => {
     let target: string | undefined = letter;
@@ -277,7 +377,17 @@ export default function HomeScreen() {
       <View style={styles.card}>
         <View>
           <Text style={styles.title}>{item.name}</Text>
-          <Text style={styles.subtitle}>{item.location}</Text>
+          <View style={styles.subtitleRow}>
+            {item.fromPhoto && (
+              <MaterialCommunityIcons
+                name="camera-outline"
+                size={14}
+                color={TEXT_MUTED}
+                style={styles.subtitleIcon}
+              />
+            )}
+            <Text style={styles.subtitle}>{item.location}</Text>
+          </View>
         </View>
         <View style={styles.quantityPill}>
           <Text style={styles.quantity}>{item.quantity}</Text>
@@ -373,17 +483,20 @@ export default function HomeScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           style={styles.list}
+          // Un élément (et non une fonction) : sinon le header est remonté
+          // à chaque rendu, ce qui arrive dès qu'une analyse se termine.
           ListHeaderComponent={
-            search
-              ? null
-              : () => (
-                  <AlwaysOnHandCard
-                    onHeightMeasured={(h) => {
-                      // + staplesHeaderWrapper margins (marginTop 14 + marginBottom 4)
-                      listHeaderHeight.current = h + 18;
-                    }}
-                  />
-                )
+            search ? null : (
+              <View
+                onLayout={(e) => {
+                  // + staplesHeaderWrapper margins (marginTop 14 + marginBottom 4)
+                  listHeaderHeight.current = e.nativeEvent.layout.height + 18;
+                }}
+              >
+                <ToReviewCard ingredients={photoIngredients.toReview} />
+                <AlwaysOnHandCard />
+              </View>
+            )
           }
           ListHeaderComponentStyle={styles.staplesHeaderWrapper}
           contentContainerStyle={{ paddingBottom: 100 }}
@@ -521,7 +634,32 @@ const styles = StyleSheet.create({
     borderColor: "#EFEFEA",
   },
   title: { fontSize: 20, fontWeight: "700", color: "#1C1C1A" },
-  subtitle: { fontSize: 14, color: TEXT_MUTED, marginTop: 3 },
+  subtitleRow: { flexDirection: "row", alignItems: "center", marginTop: 3 },
+  subtitleIcon: { marginRight: 4 },
+  subtitle: { fontSize: 14, color: TEXT_MUTED },
+  reviewCard: { marginBottom: 12, borderColor: "#F5D9C9" },
+  reviewCount: { color: WARN },
+  reviewRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
+  reviewRowBorder: { borderTopWidth: 1, borderTopColor: "#F0F0EC" },
+  reviewName: { fontSize: 15, fontWeight: "700", color: "#1C1C1A" },
+  reviewMeta: { fontSize: 13, color: TEXT_MUTED, marginTop: 2 },
+  reviewRemove: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: BG,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  reviewRemoveText: { fontSize: 13, color: TEXT_MUTED, fontWeight: "700" },
+  reviewKeep: {
+    backgroundColor: "#EEF6F0",
+    borderRadius: 16,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  reviewKeepText: { fontSize: 14, color: GREEN, fontWeight: "700" },
   quantityPill: {
     backgroundColor: "#EEF6F0",
     borderRadius: 12,

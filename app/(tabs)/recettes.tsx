@@ -1,11 +1,6 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   ScrollView,
@@ -17,9 +12,11 @@ import {
 
 import CompletionBar from "@/components/CompletionBar";
 import AvatarButton from "@/components/account/AvatarButton";
+import { usePhotos } from "@/hooks/usePhotos";
+import { countItems } from "@/lib/ingredientDetection";
+import { CategoryKey, StoredPhoto as Photo } from "@/lib/photoStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useRouter } from "expo-router";
 
 const { width } = Dimensions.get("window");
@@ -29,22 +26,6 @@ const CARD_WIDTH = (width - 48) / 2;
 // ─────────────────────────────────────────────
 // Config des catégories (ordre + icône + libellé)
 // ─────────────────────────────────────────────
-type CategoryKey = "fridge" | "freezer" | "pantry" | "counter" | "uncategorized";
-
-type DetectedItem = {
-  name: string;
-  confirmed: boolean; // false = "needs review"
-};
-
-type Photo = {
-  id: string;
-  uri: string;
-  category?: CategoryKey;
-  date?: string;
-  itemsDetected?: number;
-  needCheck?: number;
-  items?: DetectedItem[];
-};
 
 // Catégories affichées comme sections. "uncategorized" est en dernier et
 // n'accueille que les photos sans catégorie connue (jamais choisie manuellement).
@@ -62,43 +43,9 @@ const CATEGORIES: {
 
 export default function Recette() {
   const router = useRouter();
-  const [photos, setPhotos] = useState<Photo[]>([]);
-
-  useFocusEffect(
-    useCallback(() => {
-      const fetchPhotos = async () => {
-        const storedPhotos = await AsyncStorage.getItem("photos");
-
-        if (storedPhotos) {
-          const parsed = JSON.parse(storedPhotos);
-
-          // Compatibilité : si d'anciennes entrées sont de simples strings
-          // (uri uniquement) ou n'ont pas de catégorie/id, on les normalise.
-          const normalized: Photo[] = parsed.map((p: any, index: number) => {
-            if (typeof p === "string") {
-              return {
-                id: `legacy-${index}-${p}`,
-                uri: p,
-                category: "uncategorized" as CategoryKey,
-              };
-            }
-
-            return {
-              ...p,
-              id: p.id ?? `legacy-${index}-${p.uri}`,
-              category: p.category ?? ("uncategorized" as CategoryKey),
-            };
-          });
-
-          setPhotos(normalized);
-        } else {
-          setPhotos([]);
-        }
-      };
-
-      fetchPhotos();
-    }, [])
-  );
+  // ✅ Mis à jour en direct : une photo enregistrée pendant son analyse
+  // passe de "Analyzing…" à son résultat sans quitter l'écran.
+  const photos = usePhotos();
 
   // Regroupe les photos par catégorie
   const photosByCategory = useMemo(() => {
@@ -182,12 +129,54 @@ export default function Recette() {
   );
 
   // Stats globales (haut de page)
-  const totalItems = photos.reduce((sum, p) => sum + (p.itemsDetected ?? 9), 0);
-  const totalNeedCheck = photos.reduce((sum, p) => sum + (p.needCheck ?? 2), 0);
+  const totalItems = photos.reduce((sum, p) => sum + countItems(p.items).total, 0);
+  const totalNeedCheck = photos.reduce(
+    (sum, p) => sum + countItems(p.items).needCheck,
+    0
+  );
 
-  const renderPhotoCard = (item: Photo, index: number) => {
-    const needCheck = item.needCheck ?? (index % 3 === 0 ? 0 : 1);
-    const identified = item.itemsDetected ?? 2;
+  // ✅ Badge de la card selon l'état de l'analyse.
+  const renderDetectionBadge = (item: Photo) => {
+    if (item.detection === "pending") {
+      return (
+        <View style={styles.badgeMuted}>
+          <ActivityIndicator size="small" color={TEXT_MUTED} style={styles.badgeSpinner} />
+          <Text style={styles.badgeMutedText}>Analyzing…</Text>
+        </View>
+      );
+    }
+
+    if (item.detection !== "done") {
+      return (
+        <View style={styles.badgeMuted}>
+          <Ionicons name="cloud-offline-outline" size={14} color={TEXT_MUTED} />
+          <Text style={styles.badgeMutedText}>
+            {item.detection === "error" ? "Analysis failed" : "Not analyzed"}
+          </Text>
+        </View>
+      );
+    }
+
+    const { identified, needCheck } = countItems(item.items);
+
+    if (needCheck > 0) {
+      return (
+        <View style={styles.badge}>
+          <Ionicons name="warning-outline" size={14} color="#E85C41" />
+          <Text style={styles.badgeText}>{needCheck} to check</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.badgeGreen}>
+        <Ionicons name="checkmark-circle-outline" size={14} color="#37B24D" />
+        <Text style={styles.badgeGreenText}>{identified} identified</Text>
+      </View>
+    );
+  };
+
+  const renderPhotoCard = (item: Photo) => {
     const dateLabel = item.date ?? "Today • 9:12 AM";
 
     // ✅ Si la catégorie de la photo est connue (pas "uncategorized"), on la
@@ -221,7 +210,7 @@ export default function Recette() {
         onPress={() =>
           router.push({
             pathname: "/photo-detail",
-            params: { photo: JSON.stringify(item) },
+            params: { id: item.id, photo: JSON.stringify(item) },
           })
         }
       >
@@ -240,18 +229,7 @@ export default function Recette() {
 
         <View style={styles.cardFooter}>
           <Text style={styles.date}>{dateLabel}</Text>
-
-          {needCheck > 0 ? (
-            <View style={styles.badge}>
-              <Ionicons name="warning-outline" size={14} color="#E85C41" />
-              <Text style={styles.badgeText}>{needCheck} to check</Text>
-            </View>
-          ) : (
-            <View style={styles.badgeGreen}>
-              <Ionicons name="checkmark-circle-outline" size={14} color="#37B24D" />
-              <Text style={styles.badgeGreenText}>{identified} identified</Text>
-            </View>
-          )}
+          {renderDetectionBadge(item)}
         </View>
       </TouchableOpacity>
     );
@@ -288,11 +266,11 @@ export default function Recette() {
     if (categoryKey === "uncategorized" && items.length === 0) return null;
 
     const identifiedCount = items.reduce(
-      (sum, p) => sum + (p.itemsDetected ?? 2),
+      (sum, p) => sum + countItems(p.items).identified,
       0
     );
     const totalCount = items.reduce(
-      (sum, p) => sum + (p.itemsDetected ?? 2) + (p.needCheck ?? 1),
+      (sum, p) => sum + countItems(p.items).total,
       0
     );
 
@@ -337,7 +315,7 @@ export default function Recette() {
             scrollToHighlight();
           }}
         >
-          {items.map((item, index) => renderPhotoCard(item, index))}
+          {items.map((item) => renderPhotoCard(item))}
           {renderAddCard(categoryKey)}
         </View>
       </View>
@@ -646,6 +624,29 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     color: "#37B24D",
     fontWeight: "700",
+  },
+
+  badgeMuted: {
+    flexDirection: "row",
+    alignSelf: "flex-start",
+    backgroundColor: "#F0F0EC",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 30,
+    alignItems: "center",
+  },
+
+  badgeMutedText: {
+    marginLeft: 5,
+    color: TEXT_MUTED,
+    fontWeight: "700",
+  },
+
+  // ActivityIndicator "small" fait 20px : réduit à la taille d'une icône.
+  badgeSpinner: {
+    width: 14,
+    height: 14,
+    transform: [{ scale: 0.7 }],
   },
 
   addCard: {

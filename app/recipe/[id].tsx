@@ -1,10 +1,11 @@
-import { items } from "@/app/Food/data/items";
 import { recipes } from "@/app/Food/data/recipe/recipe";
+import { isIngredientOnHand } from "@/app/Food/data/utils/ingredients";
 import CookingMode from "@/components/CookingMode";
 import Avatar from "@/components/account/Avatar";
 import { CookingForSheet } from "@/components/account/CookingFor";
 import { allergenLabel, applianceLabel } from "@/constants/dietary";
 import { useAccount } from "@/context/AccountContext";
+import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
 import {
   describeReason,
   displayDiets,
@@ -56,13 +57,6 @@ function formatQuantity(value: number) {
   return `${rounded}`;
 }
 
-const isIngredientAvailable = (ingredientName: string) => {
-  const name = ingredientName.toLowerCase().trim();
-  return items.some(
-    (item) => item.quantity > 0 && item.name.toLowerCase().trim() === name
-  );
-};
-
 type Notice = {
   key: string;
   text: string;
@@ -76,6 +70,7 @@ export default function RecipePage() {
   const router = useRouter();
   const recipe = recipes.find((r) => r.id === id);
   const { account, toggleFavorite, updateCustomization } = useAccount();
+  const { activeStaples } = useAlwaysOnHand();
 
   // Hooks must run before the early return below.
   // Portions de la recette d'origine (certaines recettes n'en indiquent pas).
@@ -132,7 +127,7 @@ export default function RecipePage() {
   const dietTags = displayDiets(recipe);
   const personal = personalizeIngredients(recipe, custom);
   const kept = personal.filter((i) => !i.removed);
-  const available = kept.filter((i) => isIngredientAvailable(i.name));
+  const available = kept.filter((i) => isIngredientOnHand(i.name, activeStaples));
   const progressPct = kept.length
     ? Math.round((available.length / kept.length) * 100)
     : 0;
@@ -443,7 +438,7 @@ export default function RecipePage() {
           )}
           <View style={styles.sectionCard}>
             {personal.map((ingredient, idx) => {
-              const owned = isIngredientAvailable(ingredient.name);
+              const owned = isIngredientOnHand(ingredient.name, activeStaples);
               const scaledQty = formatQuantity(ingredient.quantity * scaleFactor);
               const changed = ingredient.removed || ingredient.swapped;
               const dislikedBy = changed

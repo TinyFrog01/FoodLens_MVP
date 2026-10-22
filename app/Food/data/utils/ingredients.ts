@@ -1,37 +1,38 @@
-import Fuse from "fuse.js";
 import { items } from "@/app/Food/data/items";
+import type { Staple } from "@/app/Food/data/staples";
+import { ingredientMatches } from "@/lib/account/recipeFilter";
 
-const normalize = (str: string) =>
-  str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
+// A staple that's switched on covers every ingredient naming it, so "Poivre"
+// also covers "Poivre noir" and "Beurre" covers "beurre non salé".
+const isCoveredByStaple = (ingredientName: string, alwaysOnHand: Staple[]) =>
+  alwaysOnHand.some((staple) =>
+    [staple.name, ...(staple.aliases ?? [])].some((term) =>
+      ingredientMatches(ingredientName, term)
+    )
+  );
 
-// Same fuzzy-match approach as the item search bar, reused here so
-// "Bouillon de legumes" in a recipe still matches "Bouillon de légumes"
-// in your inventory.
-const itemsFuse = new Fuse(items, { keys: ["name"], threshold: 0.3 });
+// Inventory items keep an exact name match: fuzzy search confuses "poivre"
+// with "Poire" and "Brie" with "Abricot".
+const isInInventory = (ingredientName: string) => {
+  const name = ingredientName.toLowerCase().trim();
+  return items.some(
+    (item) => item.quantity > 0 && item.name.toLowerCase().trim() === name
+  );
+};
 
 export const isIngredientOnHand = (
   ingredientName: string,
-  alwaysOnHandNames: string[]
-): boolean => {
-  const target = normalize(ingredientName);
-
-  const isStaple = alwaysOnHandNames.some((name) => normalize(name) === target);
-  if (isStaple) return true;
-
-  const match = itemsFuse.search(ingredientName)[0];
-  return !!match && match.item.quantity > 0;
-};
+  alwaysOnHand: Staple[]
+): boolean =>
+  isCoveredByStaple(ingredientName, alwaysOnHand) ||
+  isInInventory(ingredientName);
 
 export const getRecipeAvailability = (
   recipe: { ingredients: { name: string }[] },
-  alwaysOnHandNames: string[]
+  alwaysOnHand: Staple[]
 ) => {
   const missing = recipe.ingredients.filter(
-    (ing) => !isIngredientOnHand(ing.name, alwaysOnHandNames)
+    (ing) => !isIngredientOnHand(ing.name, alwaysOnHand)
   );
 
   return {

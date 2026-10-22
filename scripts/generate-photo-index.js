@@ -7,6 +7,9 @@ const VALID_EXT = [".jpg", ".jpeg", ".png", ".webp"];
 
 const files = fs
   .readdirSync(PHOTOS_DIR)
+  // Use precomposed accents (é, not e + ◌́) to match git and the recipe ids;
+  // macOS may list names decomposed, which breaks the build on Linux.
+  .map((f) => f.normalize("NFC"))
   .filter((f) => VALID_EXT.includes(path.extname(f).toLowerCase()))
   .filter((f) => f !== "placeholder.jpeg"); // handled separately below
 

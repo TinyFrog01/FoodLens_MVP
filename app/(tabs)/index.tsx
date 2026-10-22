@@ -14,11 +14,12 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getRecipePhoto } from "@/app/Food/data/recipe/photos";
 
-import { items } from "@/app/Food/data/items";
+import { isIngredientOnHand } from "@/app/Food/data/utils/ingredients";
 import AvatarButton from "@/components/account/AvatarButton";
 import { CookingForPill, CookingForSheet } from "@/components/account/CookingFor";
 import { applianceLabel } from "@/constants/dietary";
 import { useAccount } from "@/context/AccountContext";
+import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
 import { useRecipeFeed } from "@/hooks/useRecipeFeed";
 import { RecipeVerdict, displayDiets } from "@/lib/account/recipeFilter";
 
@@ -66,28 +67,6 @@ const getBadge = (missing: number) => {
     text: "+5",
     color: "#E53935",
   };
-};
-
-
-
-/* ---------------- CHECK INGREDIENTS ---------------- */
-
-const isIngredientAvailable = (ingredientName: string) => {
-  const name = ingredientName
-    .toLowerCase()
-    .trim();
-
-  return items.some((item) => {
-    if (item.quantity <= 0) {
-      return false;
-    }
-
-    const itemName = item.name
-      .toLowerCase()
-      .trim();
-
-    return itemName === name;
-  });
 };
 
 
@@ -148,10 +127,11 @@ const RecipeCard = ({
   const item = verdict.recipe;
   const flags = getFlags(verdict);
   const diets = displayDiets(item).slice(0, 3);
+  const { activeStaples } = useAlwaysOnHand();
 
 
   const available = item.ingredients.filter((ingredient) =>
-    isIngredientAvailable(ingredient.name)
+    isIngredientOnHand(ingredient.name, activeStaples)
   );
 
 
@@ -297,8 +277,9 @@ const RecipeCard = ({
 
 
             const available =
-              isIngredientAvailable(
-                ingredient.name
+              isIngredientOnHand(
+                ingredient.name,
+                activeStaples
               );
 
 
