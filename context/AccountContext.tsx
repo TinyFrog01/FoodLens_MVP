@@ -100,7 +100,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const signUp = useCallback(
     ({ name, email, password }: { name: string; email: string; password: string }): AuthResult => {
       const current = storedRef.current;
-      if (!current) return { ok: false, error: "Chargement en cours, réessayez." };
+      if (!current) return { ok: false, error: "Chargement en cours, réessaie." };
       const normalized = normalizeEmail(email);
       const taken = Object.values(current.accounts).some(
         (a) => a.profile.email === normalized
@@ -108,7 +108,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       if (taken) {
         return {
           ok: false,
-          error: "Un compte existe déjà avec ce courriel sur cet appareil. Connectez-vous.",
+          error: "Un compte existe déjà avec ce courriel sur cet appareil. Connecte-toi.",
         };
       }
       const profile = createAccount(name, normalized);
@@ -129,7 +129,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const logIn = useCallback(
     ({ email, password }: { email: string; password: string }): AuthResult => {
       const current = storedRef.current;
-      if (!current) return { ok: false, error: "Chargement en cours, réessayez." };
+      if (!current) return { ok: false, error: "Chargement en cours, réessaie." };
       const normalized = normalizeEmail(email);
       const entry = Object.values(current.accounts).find(
         (a) => a.profile.email === normalized

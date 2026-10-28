@@ -25,6 +25,7 @@ Our benchmark: **under 5 minutes** from opening the fridge to knowing what you'r
 ## Features
 
 ### Scan your kitchen
+- The camera is the big button in the middle of the tab bar, right under your thumb.
 - Take a photo with the camera or pick one from your gallery.
 - Recognized food goes straight into your inventory, organized by location.
 - When the AI isn't sure about an item, it flags it as **Needs review** instead of guessing for you.
@@ -36,24 +37,32 @@ Our benchmark: **under 5 minutes** from opening the fridge to knowing what you'r
 - Totals at a glance: items, total units, and what's running low.
 - **Always on hand:** staples like salt, oil, butter and flour are never counted as missing. Switch off the ones you sometimes run out of, and recipes take it into account.
 
-### Recipe feed
-- A full-screen, TikTok-style feed: scroll for the next idea, swipe left to open a recipe.
-- Every card shows the cooking time and color-coded ingredients:
+### Tonight: gold, silver, bronze
+- The first thing you see is the dinner that best fits what you have: a full-screen **gold** pick, revealed after a short "looking in your fridge" moment.
+- One swipe down shows the **silver** and **bronze** picks together; keep scrolling for the full TikTok-style feed.
+- Picks are main dishes, ranked by what you already have: one-hour weeknight recipes first, then the fewest missing ingredients, then the family's tastes.
+- Every feed card shows the cooking time and color-coded ingredients:
   - 🟩 **Green:** you have it
   - 🟥 **Red:** you don't
 - A badge tells you at a glance whether the recipe is realistic tonight, and a leaf marks vegan dishes.
 
+### Your dinner plan
+- Two questions: *which evenings do you want to cook?* and *what time do you want your suggestion: 4:30, 5 or 6 pm?*
+- FoodLens then states the plan in one sentence you confirm yourself: « Le mardi et le jeudi à 17 h, FoodLens me propose un souper avec ce que j'ai. »
+- On a planned evening, the gold pick reminds you of it.
+
 ### Recipe page
-- Adjust the number of servings.
+- Servings are set for you on main dishes: 2 for a student or couple, 4 for a family (one per person beyond that), and you can always adjust.
 - See how many ingredients you have on hand (e.g. *4 of 8*), with a check next to each one you've got.
+- Make **your version**: swap or remove ingredients and keep your notes.
 - Save the recipes you love to your favorites.
 - Tap **Start cooking** when you're ready.
 
 ### Guided cooking
-- One step per screen, with a progress bar along the top.
-- **Automatic timers:** FoodLens reads the cooking time in each step and sets the timer for you. "Bake for 15 to 20 minutes" becomes a 20:00 timer. Tap to start; it keeps running while you move on to the next steps.
+- One step per screen, with a progress bar along the top and a big **Next step** button under your thumb.
+- **The color tells you what the step asks:** blue while something boils, warm while it bakes or fries, slate while you wait, with a label repeating it.
+- **Automatic timers:** FoodLens reads the cooking time in each step and sets the timer for you. "Bake for 15 to 20 minutes" becomes a 20:00 timer. Tap to start.
 - **Check off ingredients as you go:** ingredients mentioned in a step appear in bold, and a tap crosses them off.
-- Switch between video and written instructions, or open the full list of steps.
 
 ### Your kitchen
 Set your cooking level and the appliances you own, so suggestions match what you can actually make.
@@ -61,6 +70,23 @@ Set your cooking level and the appliances you own, so suggestions match what you
 ### Chatbot
 - Ask for recipes that fit your constraints, like a diet or an allergy.
 - Send it a photo and it identifies the food.
+
+## Designed from UX research
+
+The interface follows a set of research-backed rules:
+
+| Rule | Why |
+|---|---|
+| Few options per screen, one main action | Decision time grows with the number of choices (Hick-Hyman), most of all for tired people at 5 pm |
+| Main actions under the thumb, big and close | About half of people hold their phone with one hand (Hoober); big, close targets are faster (Fitts) |
+| Sober palette, color only for information | Dishes stay the most colorful thing on screen; color means *have / missing* or *what this step asks* |
+| Possessive wording: « ton frigo », « tes recettes », « ta version » | We value what we own more (endowment effect), which is the anti-waste lever |
+| One consistent, minimal style | Clear, familiar interfaces feel more pleasant and credible (Reber et al.; Zajonc) |
+| A first recipe on the very first screen, never a form | First impressions form in 50 ms (Lindgaard) and the first session is the real trial |
+| One main recipe, two alternatives, then the feed | Choice overload hits tired people with no clear preference (Iyengar & Lepper; Scheibehenne) |
+| The reveal is a moment | Anticipation of a reward drives dopamine (Schultz et al.); the peak is what we remember (Kahneman) |
+| A dinner plan in one sentence | Implementation intentions help people reach their goals (Gollwitzer & Sheeran, d = 0.65) |
+| Servings set by profile | Most people keep the default (Johnson & Goldstein) |
 
 ## What makes it different
 

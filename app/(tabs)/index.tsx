@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { getRecipePhoto } from "@/app/Food/data/recipe/photos";
+import { staples } from "@/app/Food/data/staples";
 
 import { isIngredientOnHand } from "@/app/Food/data/utils/ingredients";
 import AvatarButton from "@/components/account/AvatarButton";
@@ -22,6 +23,7 @@ import { useAccount } from "@/context/AccountContext";
 import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
 import { useRecipeFeed } from "@/hooks/useRecipeFeed";
 import { RecipeVerdict, displayDiets } from "@/lib/account/recipeFilter";
+import { rankByFridge } from "@/lib/fridgeRanking";
 
 const { height, width } = Dimensions.get("window");
 
@@ -352,6 +354,13 @@ export default function RecipeFeed(){
 
   // Recettes filtrées pour les personnes choisies (tout, en mode invité)
   const { visible } = useRecipeFeed();
+  const { activeIds } = useAlwaysOnHand();
+
+  // Classées selon ce que tu as dans ton frigo
+  const feed = useMemo(
+    () => rankByFridge(visible, staples.filter((s) => activeIds.includes(s.id))),
+    [visible, activeIds]
+  );
   const [sheetOpen, setSheetOpen] = useState(false);
   const isEmpty = visible.length === 0;
 
@@ -393,7 +402,7 @@ export default function RecipeFeed(){
 
         <FlatList
 
-          data={visible}
+          data={feed}
 
 
           keyExtractor={(item)=>item.recipe.id}

@@ -63,7 +63,7 @@ const normalize = (parsed: any[]): StoredPhoto[] =>
     // Sans ça, la photo resterait "Analyzing…" pour toujours.
     if (photo.detection === "pending" && !analyzing.has(photo.uri)) {
       photo.detection = "error";
-      photo.detectionError = "The analysis was interrupted.";
+      photo.detectionError = "L'analyse a été interrompue.";
     }
 
     return photo;

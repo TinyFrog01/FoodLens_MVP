@@ -24,10 +24,10 @@ export default function AppliancesScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 30 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={TextStyles.eyebrow}>MES PRÉFÉRENCES</Text>
-        <Text style={TextStyles.pageTitle}>Appareils</Text>
+        <Text style={TextStyles.eyebrow}>TES PRÉFÉRENCES</Text>
+        <Text style={TextStyles.pageTitle}>Tes appareils</Text>
         <Text style={TextStyles.pageSubtitle}>
-          Cochez ce que vous avez dans votre cuisine.
+          Coche ce que tu as dans ta cuisine.
         </Text>
 
         <View style={styles.grid}>
@@ -57,7 +57,7 @@ export default function AppliancesScreen() {
           <View style={{ flex: 1, marginRight: 12 }}>
             <Text style={styles.switchTitle}>Afficher aussi les autres recettes</Text>
             <Text style={TextStyles.sectionHint}>
-              Les recettes qui demandent un appareil que vous n&apos;avez pas restent
+              Les recettes qui demandent un appareil que tu n&apos;as pas restent
               visibles, avec une mention « Nécessite ».
             </Text>
           </View>

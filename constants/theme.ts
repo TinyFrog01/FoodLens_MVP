@@ -6,6 +6,8 @@ export const Palette = {
   border: "#EDEDE8",
   borderStrong: "#E4E4DE",
   text: "#1C1C1A",
+  // Texte secondaire assez contrasté pour être lu (AA) ; muted reste pour les indices.
+  subtext: "#6B6B66",
   muted: "#8E8E86",
   green: "#3E9C5C",
   greenBright: "#37B24D",

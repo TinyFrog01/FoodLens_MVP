@@ -57,7 +57,7 @@ export default function PhotoDetail() {
 
   const category = data.category ?? "counter";
   const categoryConfig = CATEGORY_CONFIG[category];
-  const dateLabel = data.date ?? "Today • 9:12 AM";
+  const dateLabel = data.date ?? "Sans date";
 
   const items = data.items ?? [];
   const { identified, needCheck, total } = countItems(items);
@@ -74,18 +74,18 @@ export default function PhotoDetail() {
       return (
         <View style={styles.stateCard}>
           <ActivityIndicator color="#37B24D" />
-          <Text style={styles.stateText}>Analyzing ingredients…</Text>
+          <Text style={styles.stateText}>Analyse des ingrédients…</Text>
         </View>
       );
     }
 
     let message: string | null = null;
     if (data.detection === "error") {
-      message = data.detectionError ?? "The analysis failed.";
+      message = data.detectionError ?? "L'analyse a échoué.";
     } else if (data.detection !== "done") {
-      message = "This photo hasn't been analyzed yet.";
+      message = "Cette photo n'a pas encore été analysée.";
     } else if (items.length === 0) {
-      message = "No ingredients found on this photo.";
+      message = "Aucun ingrédient trouvé sur cette photo.";
     }
     if (!message) return null;
 
@@ -98,7 +98,7 @@ export default function PhotoDetail() {
         >
           <Ionicons name="sparkles-outline" size={16} color="white" />
           <Text style={styles.analyzeButtonText}>
-            {data.detection === undefined ? "Analyze" : "Analyze again"}
+            {data.detection === undefined ? "Analyser" : "Analyser de nouveau"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -130,15 +130,15 @@ export default function PhotoDetail() {
       {/* Photo */}
       <Image source={{ uri: data.uri }} style={styles.photo} />
 
-      <Text style={styles.smallTitle}>PHOTO DETAILS</Text>
-      <Text style={styles.title}>{categoryConfig.label} scan</Text>
+      <Text style={styles.smallTitle}>TON SCAN</Text>
+      <Text style={styles.title}>{categoryConfig.label}</Text>
       <Text style={styles.subtitle}>{dateLabel}</Text>
 
       {/* Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.stat}>
           <Text style={styles.statNumber}>{total}</Text>
-          <Text style={styles.statText}>Detected</Text>
+          <Text style={styles.statText}>Détectés</Text>
         </View>
 
         <View style={styles.separator} />
@@ -147,7 +147,7 @@ export default function PhotoDetail() {
           <Text style={[styles.statNumber, { color: "#37B24D" }]}>
             {identified}
           </Text>
-          <Text style={styles.statText}>Identified</Text>
+          <Text style={styles.statText}>Identifiés</Text>
         </View>
 
         <View style={styles.separator} />
@@ -156,7 +156,7 @@ export default function PhotoDetail() {
           <Text style={[styles.statNumber, { color: "#E85C41" }]}>
             {needCheck}
           </Text>
-          <Text style={styles.statText}>Need review</Text>
+          <Text style={styles.statText}>À vérifier</Text>
         </View>
       </View>
 
@@ -165,10 +165,10 @@ export default function PhotoDetail() {
       {/* ✅ Sous le seuil de confiance : l'utilisateur garde ou retire */}
       {toReview.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>To review</Text>
+          <Text style={styles.sectionTitle}>À vérifier</Text>
           <Text style={styles.sectionHint}>
-            The AI is less than {Math.round(CONFIDENCE_THRESHOLD * 100)}% sure
-            about these. Keep the ones that are really there.
+            L&apos;IA en est sûre à moins de {Math.round(CONFIDENCE_THRESHOLD * 100)} %.
+            Garde ceux qui sont vraiment dans ton frigo.
           </Text>
 
           <View style={styles.itemsCard}>
@@ -196,7 +196,7 @@ export default function PhotoDetail() {
                   <TouchableOpacity
                     style={styles.removeButton}
                     onPress={() => review(item, "remove")}
-                    accessibilityLabel={`Remove ${item.name}`}
+                    accessibilityLabel={`Retirer ${item.name}`}
                   >
                     <Ionicons name="close" size={16} color="#8E8E86" />
                   </TouchableOpacity>
@@ -204,7 +204,7 @@ export default function PhotoDetail() {
                     style={styles.keepButton}
                     onPress={() => review(item, "confirm")}
                   >
-                    <Text style={styles.keepButtonText}>Keep</Text>
+                    <Text style={styles.keepButtonText}>Garder</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -215,7 +215,7 @@ export default function PhotoDetail() {
 
       {confirmed.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Identified</Text>
+          <Text style={styles.sectionTitle}>Identifiés</Text>
 
           <View style={styles.itemsCard}>
             {confirmed.map((item, index) => (
@@ -247,7 +247,7 @@ export default function PhotoDetail() {
 
       {/* Info card */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Info</Text>
+        <Text style={styles.sectionTitle}>Infos</Text>
 
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
@@ -262,7 +262,7 @@ export default function PhotoDetail() {
               size={18}
               color="#8E8E86"
             />
-            <Text style={styles.infoLabel}>Category</Text>
+            <Text style={styles.infoLabel}>Emplacement</Text>
             <Text style={styles.infoValue}>{categoryConfig.label}</Text>
           </View>
         </View>

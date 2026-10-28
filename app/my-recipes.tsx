@@ -14,22 +14,22 @@ import { describeReason } from "@/lib/account/recipeFilter";
 
 type Tab = "favorites" | "custom" | "hidden";
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: "favorites", label: "Favoris" },
-  { key: "custom", label: "Personnalisées" },
-  { key: "hidden", label: "Masquées" },
+const TABS: { key: Tab; label: string; title: string }[] = [
+  { key: "favorites", label: "Favoris", title: "Tes favoris" },
+  { key: "custom", label: "Tes versions", title: "Tes versions" },
+  { key: "hidden", label: "Masquées", title: "Recettes masquées" },
 ];
 
 const EMPTY: Record<Tab, { icon: keyof typeof Ionicons.glyphMap; title: string; text: string }> = {
   favorites: {
     icon: "heart-outline",
     title: "Aucun favori",
-    text: "Touchez le cœur sur une recette pour la retrouver ici.",
+    text: "Touche le cœur sur une recette pour la retrouver ici.",
   },
   custom: {
     icon: "create-outline",
-    title: "Aucune recette personnalisée",
-    text: "Sur une recette, ajoutez une note ou remplacez un ingrédient.",
+    title: "Pas encore de version à toi",
+    text: "Sur une recette, touche « Faire ta version » ou ajoute une note.",
   },
   hidden: {
     icon: "eye-outline",
@@ -83,11 +83,11 @@ export default function MyRecipes() {
     <View style={styles.page}>
       <TopBar />
       <View style={styles.header}>
-        <Text style={TextStyles.eyebrow}>MES RECETTES</Text>
-        <Text style={TextStyles.pageTitle}>{TABS.find((t) => t.key === tab)?.label}</Text>
+        <Text style={TextStyles.eyebrow}>TES RECETTES</Text>
+        <Text style={TextStyles.pageTitle}>{TABS.find((t) => t.key === tab)?.title}</Text>
         {tab === "hidden" && (
           <Text style={TextStyles.pageSubtitle}>
-            Masquées pour les personnes pour qui vous cuisinez en ce moment.
+            Masquées pour les personnes pour qui tu cuisines en ce moment.
           </Text>
         )}
 

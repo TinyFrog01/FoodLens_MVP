@@ -108,7 +108,7 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
       },
     });
 
-  const title = isSelf ? "Mon profil alimentaire" : initial ? "Modifier le membre" : "Nouveau membre";
+  const title = isSelf ? "Ton profil alimentaire" : initial ? "Modifier le membre" : "Nouveau membre";
 
   return (
     <View style={styles.page}>
@@ -133,13 +133,13 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
                   update({ name });
                   if (nameError) setNameError(false);
                 }}
-                placeholder={isSelf ? "Votre prénom" : "Ex. Léa"}
+                placeholder={isSelf ? "Ton prénom" : "Ex. Léa"}
                 placeholderTextColor="#A6A6A0"
                 autoCapitalize="words"
                 autoFocus={!initial}
                 style={[styles.nameInput, nameError && { borderColor: Palette.danger }]}
               />
-              {nameError ? <Text style={styles.error}>Entrez un prénom.</Text> : null}
+              {nameError ? <Text style={styles.error}>Entre un prénom.</Text> : null}
             </View>
           </View>
 
@@ -211,7 +211,7 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
 
           <Section
             title="N'aime pas"
-            hint="Les recettes qui en contiennent passent après les autres et sont signalées, pour que vous puissiez remplacer l'ingrédient."
+            hint="Les recettes qui en contiennent passent après les autres et sont signalées, pour que tu puisses remplacer l'ingrédient."
           >
             <TagInput
               values={draft.dislikes}

@@ -141,7 +141,7 @@ export default function Recette() {
       return (
         <View style={styles.badgeMuted}>
           <ActivityIndicator size="small" color={TEXT_MUTED} style={styles.badgeSpinner} />
-          <Text style={styles.badgeMutedText}>Analyzing…</Text>
+          <Text style={styles.badgeMutedText}>Analyse…</Text>
         </View>
       );
     }
@@ -151,7 +151,7 @@ export default function Recette() {
         <View style={styles.badgeMuted}>
           <Ionicons name="cloud-offline-outline" size={14} color={TEXT_MUTED} />
           <Text style={styles.badgeMutedText}>
-            {item.detection === "error" ? "Analysis failed" : "Not analyzed"}
+            {item.detection === "error" ? "Échec de l'analyse" : "Pas analysée"}
           </Text>
         </View>
       );
@@ -163,7 +163,7 @@ export default function Recette() {
       return (
         <View style={styles.badge}>
           <Ionicons name="warning-outline" size={14} color="#E85C41" />
-          <Text style={styles.badgeText}>{needCheck} to check</Text>
+          <Text style={styles.badgeText}>{needCheck} à vérifier</Text>
         </View>
       );
     }
@@ -171,13 +171,15 @@ export default function Recette() {
     return (
       <View style={styles.badgeGreen}>
         <Ionicons name="checkmark-circle-outline" size={14} color="#37B24D" />
-        <Text style={styles.badgeGreenText}>{identified} identified</Text>
+        <Text style={styles.badgeGreenText}>
+          {identified} identifié{identified > 1 ? "s" : ""}
+        </Text>
       </View>
     );
   };
 
   const renderPhotoCard = (item: Photo) => {
-    const dateLabel = item.date ?? "Today • 9:12 AM";
+    const dateLabel = item.date ?? "Sans date";
 
     // ✅ Si la catégorie de la photo est connue (pas "uncategorized"), on la
     // repasse à la caméra pour que le "redo" sauvegarde directement sans
@@ -253,7 +255,7 @@ export default function Recette() {
         }
       >
         <Ionicons name="add" size={70} color="#B8B8B8" />
-        <Text style={styles.addText}>Add photo</Text>
+        <Text style={styles.addText}>Ajouter une photo</Text>
       </TouchableOpacity>
     );
   };
@@ -297,7 +299,7 @@ export default function Recette() {
 
           {totalCount > 0 && (
             <Text style={styles.sectionCount}>
-              {identifiedCount} of {totalCount} identified
+              {identifiedCount} sur {totalCount} identifiés
             </Text>
           )}
         </View>
@@ -341,10 +343,10 @@ export default function Recette() {
         <View style={styles.headerAvatar}>
           <AvatarButton />
         </View>
-        <Text style={styles.eyebrow}>KITCHEN INVENTORY</Text>
-        <Text style={styles.pageTitle}>Your food photos</Text>
+        <Text style={styles.eyebrow}>TES SCANS</Text>
+        <Text style={styles.pageTitle}>Tes photos</Text>
         <Text style={styles.pageSubtitle}>
-          Every fridge you've scanned appears here.
+          Chaque frigo que tu as scanné apparaît ici.
         </Text>
       </View>
 
@@ -356,12 +358,12 @@ export default function Recette() {
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
           <Text style={styles.statNumber}>{totalItems}</Text>
-          <Text style={styles.statLabel}>Items detected</Text>
+          <Text style={styles.statLabel}>Aliments vus</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
           <Text style={styles.statNumber}>{totalNeedCheck}</Text>
-          <Text style={styles.statLabel}>Need review</Text>
+          <Text style={styles.statLabel}>À vérifier</Text>
         </View>
       </View>
 
@@ -382,10 +384,10 @@ export default function Recette() {
           <View style={styles.emptyContainer}>
             <Ionicons name="images-outline" size={70} color="#BFBFBF" />
 
-            <Text style={styles.emptyTitle}>No fridge scanned yet</Text>
+            <Text style={styles.emptyTitle}>Aucun frigo scanné</Text>
 
             <Text style={styles.emptyText}>
-              Take a picture from the Camera tab.
+              Touche le bouton caméra pour scanner ton frigo.
             </Text>
           </View>
         ) : (

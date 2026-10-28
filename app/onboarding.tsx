@@ -24,11 +24,11 @@ const TILE_WIDTH = (width - 40 - 12) / 2;
 
 const STEPS = [
   {
-    title: "Vos appareils",
-    subtitle: "On ne vous proposera que des recettes réalisables dans votre cuisine.",
+    title: "Tes appareils",
+    subtitle: "On te proposera seulement des recettes réalisables dans ta cuisine.",
   },
   {
-    title: "Votre régime",
+    title: "Ton régime",
     subtitle: "Les recettes qui ne conviennent pas sont retirées. Aucun choix = tout est proposé.",
   },
   {
@@ -36,8 +36,8 @@ const STEPS = [
     subtitle: "Les recettes qui contiennent ces aliments n'apparaîtront plus du tout.",
   },
   {
-    title: "Pour qui cuisinez-vous ?",
-    subtitle: "Ajoutez les membres de votre famille, leurs goûts et ce qu'ils n'aiment pas.",
+    title: "Pour qui cuisines-tu ?",
+    subtitle: "Ajoute les membres de ta famille, leurs goûts et ce qu'ils n'aiment pas.",
   },
 ];
 
@@ -133,7 +133,7 @@ export default function Onboarding() {
 
             <Text style={[TextStyles.sectionTitle, { marginTop: 18 }]}>Autres aliments à éviter</Text>
             <Text style={[TextStyles.sectionHint, { marginBottom: 10 }]}>
-              Une intolérance qui n&apos;est pas dans la liste ? Ajoutez-la ici.
+              Une intolérance qui n&apos;est pas dans la liste ? Ajoute-la ici.
             </Text>
             <TagInput
               values={self.avoid}
@@ -178,8 +178,8 @@ export default function Onboarding() {
             </Pressable>
 
             <Text style={[TextStyles.sectionHint, { marginTop: 14 }]}>
-              Touchez une personne pour indiquer ce qu&apos;elle aime ou n&apos;aime pas. À
-              chaque repas, vous pourrez choisir pour qui vous cuisinez.
+              Touche une personne pour indiquer ce qu&apos;elle aime ou n&apos;aime pas. À
+              chaque repas, tu pourras choisir pour qui tu cuisines.
             </Text>
           </View>
         )}

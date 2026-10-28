@@ -26,12 +26,12 @@ export default function Profile() {
 // Invité : ce qu'un compte apporte
 // ─────────────────────────────────────────────
 const PERKS: { icon: IconName; text: string }[] = [
-  { icon: "leaf", text: "Filtrer les recettes selon votre régime" },
-  { icon: "shield-check-outline", text: "Masquer celles qui contiennent vos allergènes" },
-  { icon: "stove", text: "Ne voir que ce que vos appareils permettent" },
-  { icon: "account-group-outline", text: "Ajouter votre famille, ses goûts et ce qu'elle n'aime pas" },
-  { icon: "account-heart", text: "Choisir pour qui vous cuisinez et ajuster les portions" },
-  { icon: "heart-outline", text: "Favoris, notes et recettes personnalisées" },
+  { icon: "leaf", text: "Filtrer les recettes selon ton régime" },
+  { icon: "shield-check-outline", text: "Masquer celles qui contiennent tes allergènes" },
+  { icon: "stove", text: "Ne voir que ce que tes appareils permettent" },
+  { icon: "account-group-outline", text: "Ajouter ta famille, ses goûts et ce qu'elle n'aime pas" },
+  { icon: "account-heart", text: "Choisir pour qui tu cuisines, avec des portions réglées d'office" },
+  { icon: "heart-outline", text: "Tes favoris, tes notes et ta version des recettes" },
 ];
 
 function GuestProfile() {
@@ -43,10 +43,10 @@ function GuestProfile() {
     <View style={styles.page}>
       <TopBar />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 30 }]}>
-        <Text style={TextStyles.eyebrow}>MON COMPTE</Text>
+        <Text style={TextStyles.eyebrow}>TON COMPTE</Text>
         <Text style={TextStyles.pageTitle}>Mode invité</Text>
         <Text style={TextStyles.pageSubtitle}>
-          Vous voyez toutes les recettes, sans personnalisation.
+          Tu vois toutes les recettes, sans personnalisation.
         </Text>
 
         <View style={styles.perksCard}>
@@ -63,7 +63,7 @@ function GuestProfile() {
 
         <View style={{ gap: 10, marginTop: 22 }}>
           <PrimaryButton
-            label="Créer un compte"
+            label="Créer mon compte"
             onPress={() => router.push({ pathname: "/auth", params: { mode: "signup" } })}
           />
           <SecondaryButton
@@ -104,7 +104,7 @@ function AccountProfile({ account }: { account: Account }) {
   const confirmDelete = () =>
     confirmAction({
       title: "Supprimer le compte ?",
-      message: "Votre profil, votre famille, vos favoris et vos notes seront effacés de cet appareil.",
+      message: "Ton profil, ta famille, tes favoris et tes notes seront effacés de cet appareil.",
       confirmLabel: "Supprimer",
       destructive: true,
       onConfirm: deleteAccount,
@@ -182,7 +182,7 @@ function AccountProfile({ account }: { account: Account }) {
         </View>
 
         {/* Famille */}
-        <Text style={styles.sectionLabel}>Ma famille</Text>
+        <Text style={styles.sectionLabel}>Ta famille</Text>
         <View style={styles.listCard}>
           {account.members.map((m) => (
             <Pressable key={m.id} onPress={() => openMember(m.id)} style={styles.row}>
@@ -208,11 +208,11 @@ function AccountProfile({ account }: { account: Account }) {
         </View>
 
         {/* Préférences */}
-        <Text style={styles.sectionLabel}>Mes préférences</Text>
+        <Text style={styles.sectionLabel}>Tes préférences</Text>
         <View style={styles.listCard}>
           <Row
             icon="food-apple-outline"
-            label="Mon profil alimentaire"
+            label="Ton profil alimentaire"
             value={describeMember(account.self)}
             onPress={() => openMember(account.self.id)}
           />
@@ -247,24 +247,24 @@ function AccountProfile({ account }: { account: Account }) {
         </View>
 
         {/* Recettes */}
-        <Text style={styles.sectionLabel}>Mes recettes</Text>
+        <Text style={styles.sectionLabel}>Tes recettes</Text>
         <View style={styles.listCard}>
           <Row
             icon="heart-outline"
-            label="Favoris"
+            label="Tes favoris"
             value={`${account.favorites.length} recette${account.favorites.length > 1 ? "s" : ""}`}
             onPress={() => openRecipes("favorites")}
           />
           <Row
             icon="pencil-outline"
-            label="Recettes personnalisées"
-            value={`${customCount} recette${customCount > 1 ? "s" : ""} avec vos notes ou changements`}
+            label="Tes versions"
+            value={`${customCount} recette${customCount > 1 ? "s" : ""} avec tes notes ou tes changements`}
             onPress={() => openRecipes("custom")}
           />
           <Row
             icon="eye-off-outline"
             label="Recettes masquées"
-            value={`${hidden.length} selon vos filtres actuels`}
+            value={`${hidden.length} selon tes filtres actuels`}
             onPress={() => openRecipes("hidden")}
           />
         </View>

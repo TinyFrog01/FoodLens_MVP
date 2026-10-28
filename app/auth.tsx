@@ -45,12 +45,12 @@ export default function AuthScreen() {
 
   const validate = (): Errors => {
     const next: Errors = {};
-    if (isSignup && !name.trim()) next.name = "Entrez votre prénom.";
-    if (!EMAIL_RE.test(email.trim())) next.email = "Entrez un courriel valide.";
+    if (isSignup && !name.trim()) next.name = "Entre ton prénom.";
+    if (!EMAIL_RE.test(email.trim())) next.email = "Entre un courriel valide.";
     if (isSignup && password.length < MIN_PASSWORD) {
       next.password = `Au moins ${MIN_PASSWORD} caractères.`;
     } else if (!password) {
-      next.password = "Entrez votre mot de passe.";
+      next.password = "Entre ton mot de passe.";
     }
     return next;
   };
@@ -92,12 +92,12 @@ export default function AuthScreen() {
         >
           <Text style={TextStyles.eyebrow}>{isSignup ? "CRÉER UN COMPTE" : "CONNEXION"}</Text>
           <Text style={TextStyles.pageTitle}>
-            {isSignup ? "Bienvenue !" : "Content de vous revoir"}
+            {isSignup ? "Bienvenue !" : "Content de te revoir"}
           </Text>
           <Text style={TextStyles.pageSubtitle}>
             {isSignup
-              ? "Ensuite, on configure votre cuisine en quelques étapes : appareils, régime, allergies et famille."
-              : "Retrouvez vos préférences, votre famille et vos recettes favorites."}
+              ? "Ensuite, on configure ta cuisine en quelques étapes : appareils, régime, allergies et famille."
+              : "Retrouve tes préférences, ta famille et tes recettes favorites."}
           </Text>
 
           <View style={styles.form}>
@@ -123,7 +123,7 @@ export default function AuthScreen() {
                 ref={emailRef}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="vous@exemple.com"
+                placeholder="toi@exemple.com"
                 placeholderTextColor="#A6A6A0"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -142,7 +142,7 @@ export default function AuthScreen() {
                   ref={passwordRef}
                   value={password}
                   onChangeText={setPassword}
-                  placeholder={isSignup ? `${MIN_PASSWORD} caractères minimum` : "Votre mot de passe"}
+                  placeholder={isSignup ? `${MIN_PASSWORD} caractères minimum` : "Ton mot de passe"}
                   placeholderTextColor="#A6A6A0"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
@@ -195,7 +195,7 @@ export default function AuthScreen() {
           <View style={styles.note}>
             <Ionicons name="lock-closed-outline" size={15} color={Palette.muted} />
             <Text style={styles.noteText}>
-              Votre compte est enregistré sur cet appareil. Le mot de passe n&apos;est
+              Ton compte est enregistré sur cet appareil. Ton mot de passe n&apos;est
               jamais conservé en clair.
             </Text>
           </View>

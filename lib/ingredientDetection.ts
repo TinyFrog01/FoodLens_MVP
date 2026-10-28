@@ -3,14 +3,15 @@ import { Platform } from "react-native";
 
 // ─────────────────────────────────────────────
 // API FoodLens : détection des ingrédients sur une photo
-// Docs : https://food-lense-aeoaeunkl-renjijenkins.vercel.app/docs
+// Docs : https://food-lense-iqiwt8kof-renjijenkins.vercel.app/docs
 // ─────────────────────────────────────────────
 
+// URL de base du déploiement, sans /docs (la route est ajoutée plus bas).
 // Surchargeable via EXPO_PUBLIC_FOODLENS_API_URL (fichier .env) pour pointer
 // vers un autre déploiement sans toucher au code.
 const API_URL = (
   process.env.EXPO_PUBLIC_FOODLENS_API_URL ??
-  "https://food-lense-aeoaeunkl-renjijenkins.vercel.app"
+  "https://food-lense-iqiwt8kof-renjijenkins.vercel.app"
 ).replace(/\/+$/, "");
 
 const DETECT_ENDPOINT = `${API_URL}/api/v1/detect-ingredients`;
@@ -187,9 +188,9 @@ const buildFormData = async (uri: string) => {
 };
 
 const errorForStatus = (status: number) => {
-  if (status === 413) return "Photo too large for the analysis server.";
-  if (status >= 500) return "The analysis server had a problem.";
-  return `The analysis server refused the photo (${status}).`;
+  if (status === 413) return "Photo trop lourde pour le serveur d'analyse.";
+  if (status >= 500) return "Le serveur d'analyse a eu un problème.";
+  return `Le serveur d'analyse a refusé la photo (${status}).`;
 };
 
 // Envoie la photo à l'API et renvoie les ingrédients reconnus, chacun
@@ -200,7 +201,7 @@ export async function detectIngredients(uri: string): Promise<DetectedItem[]> {
     form = await buildFormData(uri);
   } catch (err) {
     console.warn("detect-ingredients: couldn't read the photo", uri, err);
-    throw new Error("Couldn't read the photo.");
+    throw new Error("Impossible de lire la photo.");
   }
 
   const controller = new AbortController();
@@ -219,8 +220,8 @@ export async function detectIngredients(uri: string): Promise<DetectedItem[]> {
     console.warn("detect-ingredients: request failed", err);
     throw new Error(
       controller.signal.aborted
-        ? "The analysis took too long."
-        : "Couldn't reach the analysis server."
+        ? "L'analyse a pris trop de temps."
+        : "Impossible de joindre le serveur d'analyse."
     );
   } finally {
     clearTimeout(timer);
@@ -237,7 +238,7 @@ export async function detectIngredients(uri: string): Promise<DetectedItem[]> {
   const list = findIngredientList(body);
   if (!list) {
     console.warn("detect-ingredients: unexpected response", body);
-    throw new Error("Unexpected response from the analysis server.");
+    throw new Error("Réponse inattendue du serveur d'analyse.");
   }
 
   return dedupe(
@@ -246,4 +247,4 @@ export async function detectIngredients(uri: string): Promise<DetectedItem[]> {
 }
 
 export const detectionErrorMessage = (err: unknown) =>
-  err instanceof Error ? err.message : "The analysis failed.";
+  err instanceof Error ? err.message : "L'analyse a échoué.";

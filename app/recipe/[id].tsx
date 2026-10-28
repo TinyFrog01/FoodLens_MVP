@@ -4,6 +4,7 @@ import CookingMode from "@/components/CookingMode";
 import Avatar from "@/components/account/Avatar";
 import { CookingForSheet } from "@/components/account/CookingFor";
 import { allergenLabel, applianceLabel } from "@/constants/dietary";
+import { Palette } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
 import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
 import {
@@ -16,9 +17,16 @@ import {
   personalizeIngredients,
 } from "@/lib/account/recipeFilter";
 import { confirmAction } from "@/lib/confirm";
+import {
+  defaultServings,
+  formatIngredient,
+  profileLabel,
+  recipeServings,
+} from "@/lib/portions";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useRef, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getRecipePhoto } from "@/app/Food/data/recipe/photos";
 import {
   Dimensions,
@@ -35,27 +43,22 @@ import {
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = width * 0.25;
 
-// Shared palette, pulled from the Kitchen Inventory screens (soft off-white
-// background, white cards, green as the single accent color).
+// Shared palette (constants/theme): soft off-white background, white cards,
+// green for what you have, red for what's missing. The darker amber keeps
+// "doesn't like" notes legible on their light background.
 const COLORS = {
-  bg: "#F7F7F5",
-  card: "#FFFFFF",
-  border: "#EEEEEE",
-  text: "#111111",
-  subtext: "#6B6B6B",
-  green: "#18A64B",
-  greenSoft: "#DFF7DF",
-  red: "#E53935",
-  redSoft: "#FFE4E4",
+  bg: Palette.bg,
+  card: Palette.card,
+  border: Palette.border,
+  text: Palette.text,
+  subtext: Palette.subtext,
+  green: Palette.green,
+  greenSoft: Palette.greenSoft,
+  red: Palette.danger,
+  redSoft: Palette.dangerSoft,
   amber: "#B45309",
-  amberSoft: "#FEF3E2",
+  amberSoft: Palette.warnSoft,
 };
-
-// Nicely formats a scaled quantity (2 -> "2", 1.333 -> "1.33").
-function formatQuantity(value: number) {
-  const rounded = Math.round(value * 100) / 100;
-  return `${rounded}`;
-}
 
 type Notice = {
   key: string;
@@ -71,11 +74,11 @@ export default function RecipePage() {
   const recipe = recipes.find((r) => r.id === id);
   const { account, toggleFavorite, updateCustomization } = useAccount();
   const { activeStaples } = useAlwaysOnHand();
+  const insets = useSafeAreaInsets();
 
   // Hooks must run before the early return below.
-  // Portions de la recette d'origine (certaines recettes n'en indiquent pas).
-  const baseServings = recipe?.servings && recipe.servings > 0 ? recipe.servings : 2;
-  const [guestServings, setGuestServings] = useState(baseServings);
+  // null : les portions par défaut du profil.
+  const [guestServings, setGuestServings] = useState<number | null>(null);
   const [isCooking, setIsCooking] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -111,17 +114,28 @@ export default function RecipePage() {
 
   const people = account ? getCookingFor(account) : [];
 
-  // Portions : celles de la recette, ou celles choisies pour cette recette
-  // (mémorisées avec le compte). On ne les change pas d'office selon le
-  // nombre de personnes — un gâteau pour 9 deviendrait « 0.44 oeufs » —
-  // mais on propose d'ajuster en un geste.
-  const servings = account ? custom?.servings ?? baseServings : guestServings;
-  const canSuggest = Boolean(account && recipe.servings && recipe.servings > 0);
+  // Portions : réglées d'office selon le profil sur les plats principaux
+  // (2 pour toi, 4 pour ta famille), celles de la recette sinon — un gâteau
+  // pour 9 deviendrait « 0,44 œuf ». Un réglage choisi pour cette recette est
+  // mémorisé avec le compte.
+  const baseServings = recipeServings(recipe);
+  const peopleCount = Math.max(1, people.length);
+  const suggestedServings = defaultServings(recipe, peopleCount);
+  const servings = (account ? custom?.servings : guestServings) ?? suggestedServings;
   const setServings = (value: number) => {
     const next = Math.max(1, value);
-    if (account) updateCustomization(recipe.id, { servings: next });
-    else setGuestServings(next);
+    if (account) {
+      updateCustomization(recipe.id, {
+        servings: next === suggestedServings ? undefined : next,
+      });
+    } else {
+      setGuestServings(next);
+    }
   };
+  const resetServings = () =>
+    account
+      ? updateCustomization(recipe.id, { servings: undefined })
+      : setGuestServings(null);
 
   const scaleFactor = servings / baseServings;
   const dietTags = displayDiets(recipe);
@@ -137,9 +151,9 @@ export default function RecipePage() {
 
   const askForAccount = (message: string) =>
     confirmAction({
-      title: "Créez un compte gratuit",
+      title: "Crée ton compte gratuit",
       message,
-      confirmLabel: "Créer un compte",
+      confirmLabel: "Créer mon compte",
       cancelLabel: "Plus tard",
       onConfirm: () => router.push({ pathname: "/auth", params: { mode: "signup" } }),
     });
@@ -147,11 +161,11 @@ export default function RecipePage() {
   const onFavorite = () =>
     account
       ? toggleFavorite(recipe.id)
-      : askForAccount("Vos favoris seront enregistrés et faciles à retrouver.");
+      : askForAccount("Tes recettes favorites seront enregistrées et faciles à retrouver.");
 
   const onPersonalize = () => {
     if (!account) {
-      askForAccount("Remplacez ou retirez des ingrédients et gardez vos notes pour chaque recette.");
+      askForAccount("Fais ta version : remplace ou retire des ingrédients et garde tes notes pour chaque recette.");
       return;
     }
     setEditing((e) => !e);
@@ -201,7 +215,7 @@ export default function RecipePage() {
   if (verdict.missingAppliances.length > 0) {
     notices.push({
       key: "appliances",
-      text: `Nécessite : ${verdict.missingAppliances.map(applianceLabel).join(", ")} (vous n'en avez pas)`,
+      text: `Nécessite : ${verdict.missingAppliances.map(applianceLabel).join(", ")} (tu n'en as pas)`,
       icon: "alert-circle-outline",
       color: COLORS.subtext,
       bg: COLORS.bg,
@@ -210,7 +224,7 @@ export default function RecipePage() {
   verdict.dislikes.forEach(({ person, term }) =>
     notices.push({
       key: `dislike-${person}-${term}`,
-      text: `${person} n'aime pas : ${term}. Touchez « Personnaliser » pour le remplacer.`,
+      text: `${person} n'aime pas : ${term}. Touche « Faire ta version » pour le remplacer.`,
       icon: "thumbs-down-outline",
       color: COLORS.amber,
       bg: COLORS.amberSoft,
@@ -229,7 +243,7 @@ export default function RecipePage() {
   return (
     <View style={styles.root} {...panResponder.panHandlers}>
       {/* Navbar */}
-      <View style={styles.navbar}>
+      <View style={[styles.navbar, { paddingTop: insets.top + 4 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.navbarButton}>
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
@@ -247,11 +261,17 @@ export default function RecipePage() {
 
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         keyboardShouldPersistTaps="handled"
       >
       <Image source={getRecipePhoto(recipe.id)} style={styles.image} />
         <View style={styles.content}>
+          {custom && (
+            <View style={styles.versionPill}>
+              <Ionicons name="create-outline" size={13} color={COLORS.text} />
+              <Text style={styles.versionText}>Ta version</Text>
+            </View>
+          )}
           <Text style={styles.title}>{recipe.title}</Text>
 
           {/* Diet tags */}
@@ -333,9 +353,9 @@ export default function RecipePage() {
             >
               <Ionicons name="people-outline" size={22} color={COLORS.green} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.guestTitle}>Adaptez cette recette à votre famille</Text>
+                <Text style={styles.guestTitle}>Adapte cette recette à ta famille</Text>
                 <Text style={styles.guestText}>
-                  Créez un compte pour tenir compte des régimes, allergies et goûts de chacun.
+                  Crée ton compte pour tenir compte des régimes, des allergies et des goûts de chacun.
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
@@ -373,37 +393,27 @@ export default function RecipePage() {
               <Text style={styles.infoLabel}>Portions</Text>
             </View>
           </View>
-          {account && (
+          {/* Portions par défaut selon le profil : on le dit, et on peut y revenir. */}
+          {servings !== suggestedServings ? (
             <View style={styles.servingsActions}>
-              {canSuggest && servings !== people.length && (
-                <TouchableOpacity
-                  onPress={() => setServings(people.length)}
-                  style={styles.servingsChip}
-                >
-                  <Ionicons name="people-outline" size={14} color={COLORS.green} />
-                  <Text style={styles.servingsChipText}>
-                    Ajuster pour {people.length} personne{people.length > 1 ? "s" : ""}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              {custom?.servings !== undefined && custom.servings !== baseServings && (
-                <TouchableOpacity
-                  onPress={() => updateCustomization(recipe.id, { servings: undefined })}
-                  style={styles.servingsChip}
-                >
-                  <Ionicons name="refresh" size={14} color={COLORS.green} />
-                  <Text style={styles.servingsChipText}>
-                    Recette d&apos;origine ({baseServings})
-                  </Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity onPress={resetServings} style={styles.servingsChip}>
+                <Ionicons name="refresh" size={14} color={COLORS.green} />
+                <Text style={styles.servingsChipText}>
+                  Revenir à {suggestedServings} portions
+                </Text>
+              </TouchableOpacity>
             </View>
-          )}
+          ) : suggestedServings !== baseServings ? (
+            <Text style={styles.servingsNote}>
+              Réglé pour {profileLabel(peopleCount)} · recette d&apos;origine : {baseServings}{" "}
+              portions
+            </Text>
+          ) : null}
 
           {/* On-hand progress, styled after the Kitchen Inventory stats bar */}
           <View style={styles.progressCard}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>En stock</Text>
+              <Text style={styles.progressLabel}>Dans ton frigo</Text>
               <Text style={styles.progressNumber}>
                 {available.length} sur {kept.length}
               </Text>
@@ -426,20 +436,18 @@ export default function RecipePage() {
                 color={editing ? "#FFF" : COLORS.text}
               />
               <Text style={[styles.personalizeText, editing && { color: "#FFF" }]}>
-                {editing ? "Terminé" : "Personnaliser"}
+                {editing ? "Terminé" : "Faire ta version"}
               </Text>
             </TouchableOpacity>
           </View>
           {editing && (
             <Text style={styles.editingHint}>
-              Remplacez ou retirez un ingrédient : la recette est enregistrée à votre
-              façon.
+              Remplace ou retire un ingrédient : la recette devient ta version.
             </Text>
           )}
           <View style={styles.sectionCard}>
             {personal.map((ingredient, idx) => {
               const owned = isIngredientOnHand(ingredient.name, activeStaples);
-              const scaledQty = formatQuantity(ingredient.quantity * scaleFactor);
               const changed = ingredient.removed || ingredient.swapped;
               const dislikedBy = changed
                 ? []
@@ -487,8 +495,7 @@ export default function RecipePage() {
                             ingredient.removed && styles.ingredientRemoved,
                           ]}
                         >
-                          {scaledQty}
-                          {ingredient.unit} {ingredient.name}
+                          {formatIngredient(ingredient, scaleFactor)}
                         </Text>
                         {ingredient.swapped && (
                           <Text style={styles.ingredientCaption}>
@@ -507,12 +514,6 @@ export default function RecipePage() {
                         )}
                       </View>
                     </View>
-
-                    {!editing && !owned && !ingredient.removed && (
-                      <TouchableOpacity style={styles.addButton}>
-                        <Text style={styles.addButtonText}>Ajouter</Text>
-                      </TouchableOpacity>
-                    )}
                   </View>
 
                   {editing && (
@@ -588,7 +589,7 @@ export default function RecipePage() {
           {/* Notes personnelles */}
           {account && (
             <>
-              <Text style={styles.sectionTitle}>Mes notes</Text>
+              <Text style={styles.sectionTitle}>Tes notes</Text>
               <TextInput
                 value={noteDraft}
                 onChangeText={setNoteDraft}
@@ -603,8 +604,8 @@ export default function RecipePage() {
         </View>
       </ScrollView>
 
-      {/* Floating CTA, inspired by the "Start cooking" pill in the reference app */}
-      <View style={styles.ctaWrap} pointerEvents="box-none">
+      {/* Floating CTA, full width and under the thumb: the one main action here */}
+      <View style={[styles.ctaWrap, { paddingBottom: insets.bottom + 16 }]} pointerEvents="box-none">
         <TouchableOpacity
           style={styles.ctaButton}
           activeOpacity={0.85}
@@ -653,9 +654,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    height: 100,
     paddingHorizontal: 8,
-    paddingTop: 30,
+    paddingBottom: 8,
     backgroundColor: COLORS.bg,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
@@ -668,6 +668,20 @@ const styles = StyleSheet.create({
   content: { padding: 22 },
 
   title: { fontSize: 30, fontWeight: "800", color: COLORS.text, lineHeight: 36 },
+  versionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 5,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  versionText: { fontSize: 12.5, fontWeight: "800", color: COLORS.text },
 
   tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   tagPill: { backgroundColor: COLORS.greenSoft, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
@@ -744,9 +758,9 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 12, color: COLORS.subtext },
   stepperRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   stepperButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: COLORS.bg,
     justifyContent: "center",
     alignItems: "center",
@@ -764,6 +778,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   servingsChipText: { color: COLORS.green, fontWeight: "700", fontSize: 13 },
+  servingsNote: { fontSize: 13, color: COLORS.subtext, textAlign: "center", marginTop: 10 },
   servingsReset: { alignSelf: "center", paddingVertical: 8, marginTop: 4 },
   servingsResetText: { color: COLORS.green, fontWeight: "700", fontSize: 13 },
 
@@ -833,8 +848,6 @@ const styles = StyleSheet.create({
   ingredientText: { fontSize: 16, color: COLORS.text, flexShrink: 1 },
   ingredientRemoved: { textDecorationLine: "line-through", color: COLORS.subtext },
   ingredientCaption: { fontSize: 12.5, color: COLORS.subtext, marginTop: 2, fontWeight: "600" },
-  addButton: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, marginLeft: 8 },
-  addButtonText: { fontWeight: "600", fontSize: 13, color: COLORS.text },
   editActions: { flexDirection: "row", gap: 6, marginTop: 10, marginLeft: 44 },
   smallButton: {
     borderWidth: 1,
@@ -867,10 +880,20 @@ const styles = StyleSheet.create({
   },
   swapOkText: { color: "#FFF", fontWeight: "700" },
 
-  stepsCard: { backgroundColor: COLORS.greenSoft, borderRadius: 18, padding: 18 },
+  // Sober card like the others: color is kept for what you have / what's missing.
+  stepsCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 18,
+    padding: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
   stepRow: { flexDirection: "row", marginBottom: 18, alignItems: "flex-start" },
-  stepCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.green, justifyContent: "center", alignItems: "center", marginRight: 14, marginTop: 2 },
-  stepNumber: { color: "#FFF", fontWeight: "700", fontSize: 13 },
+  stepCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, justifyContent: "center", alignItems: "center", marginRight: 14, marginTop: 2 },
+  stepNumber: { color: COLORS.text, fontWeight: "800", fontSize: 13 },
   stepText: { flex: 1, fontSize: 16, lineHeight: 24, color: COLORS.text },
 
   noteInput: {
@@ -886,17 +909,18 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
 
-  ctaWrap: { position: "absolute", left: 0, right: 0, bottom: 0, paddingBottom: 28, paddingTop: 14, alignItems: "center" },
+  ctaWrap: { position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 14, paddingHorizontal: 20 },
   ctaButton: {
     backgroundColor: COLORS.text,
     borderRadius: 30,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
-  ctaText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+  ctaText: { color: "#FFF", fontSize: 17, fontWeight: "800" },
 });

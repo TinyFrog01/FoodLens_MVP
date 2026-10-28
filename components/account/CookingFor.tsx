@@ -33,7 +33,7 @@ export function CookingForPill({ onPress }: { onPress: () => void }) {
         style={({ pressed }) => [styles.pill, pressed && { opacity: 0.85 }]}
       >
         <Ionicons name="person-outline" size={15} color="#FFFFFF" />
-        <Text style={styles.pillText}>Mode invité · Créer un compte</Text>
+        <Text style={styles.pillText}>Invité · Crée ton compte</Text>
       </Pressable>
     );
   }
@@ -129,8 +129,8 @@ export function CookingForSheet({
           </ScrollView>
 
           <Text style={styles.count}>
-            {selected.length} personne{selected.length > 1 ? "s" : ""} · portions
-            ajustables en un geste sur chaque recette
+            {selected.length} personne{selected.length > 1 ? "s" : ""} · les portions de
+            chaque souper sont réglées d&apos;office
           </Text>
 
           <View style={styles.footer}>
@@ -143,7 +143,7 @@ export function CookingForSheet({
               style={styles.manage}
             >
               <Ionicons name="people-outline" size={18} color={Palette.green} />
-              <Text style={styles.manageText}>Gérer la famille</Text>
+              <Text style={styles.manageText}>Gérer ta famille</Text>
             </Pressable>
             <PrimaryButton label="Terminé" onPress={onClose} style={{ flex: 1 }} />
           </View>

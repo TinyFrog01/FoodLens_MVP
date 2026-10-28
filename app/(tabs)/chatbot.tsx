@@ -1,155 +1,90 @@
-import React from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import AvatarButton from "@/components/account/AvatarButton";
+import { CardShadow, Palette, TextStyles } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
 
-export default function HomeScreen() {
+// Exemples de demandes : un tap remplit la question.
+const SUGGESTIONS = [
+  "Sans gluten, en 30 minutes",
+  "Végétarien pour 4",
+  "Avec ce qu'il reste dans mon frigo",
+];
+
+export default function Assistant() {
+  const insets = useSafeAreaInsets();
   const { account } = useAccount();
+  const [question, setQuestion] = useState("");
   const greeting = account ? `Bonjour ${account.self.name} !` : "Bonjour !";
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Top Bar */}
+    <View style={[styles.page, { paddingTop: insets.top + 12 }]}>
       <View style={styles.header}>
-        <View style={{ flex: 1 }} />
-
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="notifications-outline" size={22} color="#222" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="settings-outline" size={22} color="#222" />
-        </TouchableOpacity>
-
-        <View style={styles.avatar}>
-          <AvatarButton />
+        <View style={{ flex: 1 }}>
+          <Text style={TextStyles.eyebrow}>ASSISTANT</Text>
+          <Text style={TextStyles.pageTitle}>{greeting}</Text>
         </View>
+        <AvatarButton />
+      </View>
+      <Text style={TextStyles.pageSubtitle}>
+        Demande une recette selon tes contraintes, ou envoie une photo pour identifier un
+        aliment.
+      </Text>
+
+      <View style={styles.searchBar}>
+        <Ionicons name="search" size={22} color={Palette.muted} />
+        <TextInput
+          value={question}
+          onChangeText={setQuestion}
+          placeholder="Demander une recette…"
+          placeholderTextColor="#A6A6A0"
+          returnKeyType="send"
+          style={styles.input}
+        />
       </View>
 
-      {/* Greeting */}
-      <View style={styles.content}>
-        
-
-        <Text style={styles.description}>
-          {greeting} Vous pouvez créer des recettes. Prendre une photo pour demander des
-          éléments spécifiques ou simplement demander une recette avec des
-          contraintes spéciales.
-        </Text>
-
-        {/* Search */}
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={28} color="#000" />
-          <TextInput
-            placeholder="Demander une recette..."
-            placeholderTextColor="#999"
-            style={styles.input}
-          />
-        </View>
-
-        {/* Suggestions */}
-        <View style={styles.chipsContainer}>
-          <View style={styles.chip} />
-          <View style={styles.chipSmall} />
-          <View style={styles.chipLarge} />
-          <View style={styles.chipSmall} />
-        </View>
+      <View style={styles.chips}>
+        {SUGGESTIONS.map((suggestion) => (
+          <Pressable
+            key={suggestion}
+            onPress={() => setQuestion(suggestion)}
+            style={({ pressed }) => [styles.chip, pressed && { opacity: 0.8 }]}
+          >
+            <Text style={styles.chipText}>{suggestion}</Text>
+          </Pressable>
+        ))}
       </View>
-
-      
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#E5E5E5",
-  },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 22,
-    paddingTop: 15,
-  },
-
-  iconButton: {
-    marginHorizontal: 8,
-  },
-
-  avatar: {
-    marginLeft: 10,
-  },
-
-  content: {
-    flex: 1,
-    paddingHorizontal: 28,
-    paddingTop: 40,
-  },
-
-
-
-  description: {
-    fontSize: 40,
-    lineHeight: 37,
-    color: "#111",
-    marginBottom: 50,
-  },
-
+  page: { flex: 1, backgroundColor: Palette.bg, paddingHorizontal: 20 },
+  header: { flexDirection: "row", alignItems: "flex-start" },
   searchBar: {
-    height: 62,
-    backgroundColor: "#FFF",
-    borderRadius: 32,
+    height: 56,
+    marginTop: 24,
+    borderRadius: 28,
+    backgroundColor: Palette.card,
+    borderWidth: 1,
+    borderColor: Palette.border,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 18,
+    ...CardShadow,
   },
-
-  input: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 18,
-  },
-
-  chipsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 18,
-  },
-
+  input: { flex: 1, marginLeft: 10, fontSize: 16, color: Palette.text },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 16 },
   chip: {
-    width: 62,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#FFF",
-    marginRight: 10,
-    marginBottom: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Palette.borderStrong,
+    backgroundColor: Palette.card,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
-
-  chipSmall: {
-    width: 36,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#FFF",
-    marginRight: 10,
-    marginBottom: 12,
-  },
-
-  chipLarge: {
-    width: 92,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#FFF",
-    marginRight: 10,
-    marginBottom: 12,
-  },
+  chipText: { fontSize: 14, fontWeight: "600", color: Palette.text },
 });

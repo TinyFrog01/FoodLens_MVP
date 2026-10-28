@@ -90,9 +90,9 @@ const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
     <View style={[styles.staplesCard, styles.reviewCard]}>
       <View style={styles.staplesHeader}>
         <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={styles.staplesTitle}>To review</Text>
+          <Text style={styles.staplesTitle}>À vérifier</Text>
           <Text style={styles.staplesSubtitle}>
-            {"Seen on your photos, but the AI isn't sure. Keep the ones you really have."}
+            {"Vus sur tes photos, mais l'IA n'en est pas sûre. Garde ceux que tu as vraiment."}
           </Text>
         </View>
         <Text style={[styles.staplesCount, styles.reviewCount]}>
@@ -112,7 +112,7 @@ const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
             <Text style={styles.reviewMeta} numberOfLines={1}>
               {categoriesLabel(ingredient)}
               {ingredient.confidence !== undefined
-                ? ` \u00b7 ${Math.round(ingredient.confidence * 100)}% sure`
+                ? ` \u00b7 s\u00fbr \u00e0 ${Math.round(ingredient.confidence * 100)} %`
                 : ""}
             </Text>
           </View>
@@ -120,15 +120,15 @@ const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
           <Pressable
             style={styles.reviewRemove}
             onPress={() => reviewItems(ingredient.refs, "remove").catch(console.error)}
-            accessibilityLabel={`Remove ${ingredient.name}`}
+            accessibilityLabel={`Retirer ${ingredient.name}`}
           >
-            <Text style={styles.reviewRemoveText}>\u2715</Text>
+            <MaterialCommunityIcons name="close" size={16} color={TEXT_MUTED} />
           </Pressable>
           <Pressable
             style={styles.reviewKeep}
             onPress={() => reviewItems(ingredient.refs, "confirm").catch(console.error)}
           >
-            <Text style={styles.reviewKeepText}>Keep</Text>
+            <Text style={styles.reviewKeepText}>Garder</Text>
           </Pressable>
         </View>
       ))}
@@ -402,33 +402,33 @@ export default function HomeScreen() {
         <View style={styles.headerAvatar}>
           <AvatarButton />
         </View>
-        <Text style={styles.eyebrow}>KITCHEN INVENTORY</Text>
-        <Text style={styles.pageTitle}>Your items</Text>
-        <Text style={styles.pageSubtitle}>Everything currently in your kitchen.</Text>
+        <Text style={styles.eyebrow}>TON FRIGO</Text>
+        <Text style={styles.pageTitle}>Tes aliments</Text>
+        <Text style={styles.pageSubtitle}>Tout ce que tu as en ce moment dans ta cuisine.</Text>
       </View>
 
       <View style={styles.statsCard}>
         <View style={styles.statBlock}>
           <Text style={styles.statNumber}>{totalItems}</Text>
-          <Text style={styles.statLabel}>Items</Text>
+          <Text style={styles.statLabel}>Aliments</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
           <Text style={styles.statNumber}>{totalUnits}</Text>
-          <Text style={styles.statLabel}>Total units</Text>
+          <Text style={styles.statLabel}>Unités</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
           <Text style={[styles.statNumber, lowStock > 0 && styles.statNumberWarn]}>
             {lowStock}
           </Text>
-          <Text style={styles.statLabel}>Running low</Text>
+          <Text style={styles.statLabel}>Presque fini</Text>
         </View>
       </View>
 
       <TextInput
         style={styles.search}
-        placeholder="Recherche..."
+        placeholder="Chercher dans ton frigo…"
         placeholderTextColor="#A6A6A0"
         value={search}
         onChangeText={setSearch}
@@ -652,7 +652,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 8,
   },
-  reviewRemoveText: { fontSize: 13, color: TEXT_MUTED, fontWeight: "700" },
   reviewKeep: {
     backgroundColor: "#EEF6F0",
     borderRadius: 16,

@@ -2,6 +2,7 @@
   "expo": {
     "name": "foodlens_fruits360",
     "slug": "foodlens",
+    "scheme": "foodlens",
     "version": "1.0.0",
     "owner": "tinyfr0gs-organization",
     "ios": {
