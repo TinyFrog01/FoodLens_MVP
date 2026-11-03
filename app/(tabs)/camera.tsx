@@ -24,11 +24,14 @@ import {
 import { useLightStatusBar } from "@/hooks/useLightStatusBar";
 import {
   countItems,
+  describeItems,
   DetectedItem,
   detectionErrorMessage,
   DetectionStatus,
 } from "@/lib/ingredientDetection";
 import {
+  CATEGORY_LABELS,
+  categoryOf,
   saveDetectionResult,
   startAnalysis,
   StoredPhoto,
@@ -158,7 +161,7 @@ const DetectionSummary = ({
                 !item.confirmed && styles.ingredientChipTextCheck,
               ]}
             >
-              {item.confirmed ? item.name : `${item.name} ?`}
+              {item.confirmed ? describeItems([item]) : `${describeItems([item])} ?`}
             </Text>
           </View>
         ))}
@@ -174,9 +177,12 @@ export default function Camera() {
   // ✅ catégorie passée par le "+" d'une section (ex: /camera?category=fridge)
   // ✅ editId passé par le bouton "redo" d'une photo existante
   //    (ex: /camera?editId=123&category=fridge)
+  // ✅ replaceCategory passé par le bouton "tout reprendre" d'une section
+  //    (ex: /camera?replaceCategory=fridge&category=fridge)
   const params = useLocalSearchParams<{
     category?: string;
     editId?: string;
+    replaceCategory?: string;
   }>();
 
   const [facing, setFacing] = useState<CameraType>("back");
@@ -203,6 +209,12 @@ export default function Camera() {
     undefined
   );
   const isRedo = !!presetEditId;
+
+  // ✅ si défini, on reprend toute une catégorie : à l'enregistrement, ses
+  // anciennes photos (et leurs ingrédients) sont remplacées par la rafale.
+  const [replaceCategory, setReplaceCategory] =
+    useState<StoredPhoto["category"]>(undefined);
+  const replaceLabel = replaceCategory && CATEGORY_LABELS[replaceCategory];
 
   const [saving, setSaving] = useState(false);
 
@@ -246,13 +258,17 @@ export default function Camera() {
         | CategoryKey
         | undefined;
       const incomingEditId = paramsRef.current.editId;
+      const incomingReplaceCategory = paramsRef.current.replaceCategory as
+        | StoredPhoto["category"]
+        | undefined;
+      const startsFresh = !!(incomingEditId || incomingReplaceCategory);
 
-      if (incomingEditId) {
-        // Mode redo : on repart d'une session vide (une seule photo).
+      if (startsFresh) {
+        // Mode redo / "tout reprendre" : on repart d'une session vide.
         setShots([]);
       }
 
-      if (incomingCategory || incomingEditId) {
+      if (incomingCategory || startsFresh) {
         // Venu d'un "+" ou d'un redo : on veut prendre une photo, donc on
         // revient sur la caméra même si l'étape de tri était ouverte.
         setStep("camera");
@@ -262,16 +278,21 @@ export default function Camera() {
         // Venu d'un "+" de section (ou d'un redo avec catégorie connue) :
         // la puce correspondante est présélectionnée.
         setActiveCategory(incomingCategory);
-      } else if (incomingEditId || shotsRef.current.length === 0) {
+      } else if (startsFresh || shotsRef.current.length === 0) {
         // Pas de catégorie résiduelle d'une visite précédente. Si une rafale
         // est en cours, on garde en revanche la puce choisie par l'utilisateur.
         setActiveCategory(null);
       }
 
       setPresetEditId(incomingEditId);
+      setReplaceCategory(incomingReplaceCategory);
 
-      if (incomingCategory || incomingEditId) {
-        router.setParams({ category: undefined, editId: undefined });
+      if (incomingCategory || startsFresh) {
+        router.setParams({
+          category: undefined,
+          editId: undefined,
+          replaceCategory: undefined,
+        });
       }
       // Deps volontairement vide : voir commentaire ci-dessus.
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -312,6 +333,7 @@ export default function Camera() {
     setStep("camera");
     setActiveCategory(null);
     setPresetEditId(undefined);
+    setReplaceCategory(undefined);
     detectionsRef.current.clear();
   };
 
@@ -473,8 +495,14 @@ export default function Camera() {
           return [...photos, toStored(shot, shot.id)];
         }
 
+        // ✅ Mode "tout reprendre" : les anciennes photos de la catégorie
+        // sont retirées dans la même écriture que l'ajout des nouvelles.
+        const kept = replaceCategory
+          ? photos.filter((p) => categoryOf(p) !== replaceCategory)
+          : photos;
+
         saved = shots.map((shot) => ({ shot, id: shot.id }));
-        return [...photos, ...shots.map((shot) => toStored(shot, shot.id))];
+        return [...kept, ...shots.map((shot) => toStored(shot, shot.id))];
       });
     } catch (err) {
       // On garde les photos à l'écran pour que l'utilisateur puisse réessayer.
@@ -508,6 +536,8 @@ export default function Camera() {
       saveLabel = `Range encore ${pluralize(unsortedCount, "photo")}`;
     } else if (isRedo) {
       saveLabel = "Remplacer la photo";
+    } else if (replaceLabel) {
+      saveLabel = `Remplacer ${replaceLabel} par ${pluralize(shots.length, "photo")}`;
     }
 
     return (
@@ -681,6 +711,8 @@ export default function Camera() {
   let hint = "Prends-en autant que tu veux, tu les rangeras ensuite";
   if (isRedo) {
     hint = "Reprends cette photo";
+  } else if (replaceLabel) {
+    hint = `Ces photos remplaceront toutes celles de : ${replaceLabel}`;
   } else if (activeCategoryConfig) {
     hint = `Les photos vont directement dans : ${activeCategoryConfig.label}`;
   }

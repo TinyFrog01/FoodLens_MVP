@@ -1,10 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
+  describeItems,
   DetectedItem,
   DetectionStatus,
   detectIngredients,
   detectionErrorMessage,
+  itemQuantity,
   normalizeName,
 } from "@/lib/ingredientDetection";
 
@@ -35,6 +37,13 @@ export const CATEGORY_LABELS: Record<CategoryKey, string> = {
   counter: "Comptoir",
   uncategorized: "Non catégorisé",
 };
+
+// Section où la photo est affichée : une catégorie inconnue tombe dans
+// "Non catégorisé".
+export const categoryOf = (photo: StoredPhoto): CategoryKey =>
+  photo.category && photo.category in CATEGORY_LABELS
+    ? photo.category
+    : "uncategorized";
 
 // Uris en cours d'analyse pendant cette session. Une photo enregistrée en
 // "pending" qui n'y est pas a été interrompue (app fermée avant la réponse).
@@ -155,6 +164,18 @@ export async function analyzePhoto(photo: StoredPhoto) {
   await saveDetectionResult(photo.id, photo.uri, detectIngredients(photo.uri));
 }
 
+// ✅ Les ingrédients d'une photo partent avec elle : la liste d'aliments est
+// recalculée à partir des photos restantes (collectIngredients). 2 pommes sur
+// la photo supprimée = 2 pommes en moins ; celles vues ailleurs restent.
+export function deletePhotos(ids: string[]) {
+  return updatePhotos((photos) => photos.filter((p) => !ids.includes(p.id)));
+}
+
+export const deletePhotoMessage = (photo: StoredPhoto) =>
+  photo.items?.length
+    ? `Ces aliments seront retirés de ta liste : ${describeItems(photo.items)}.`
+    : "Aucun aliment n'a été trouvé dessus.";
+
 export type ItemRef = { photoId: string; name: string };
 
 // "Garder" (confirm) ou "Retirer" (remove) un ingrédient à vérifier, sur une
@@ -193,6 +214,8 @@ export type PhotoIngredient = {
   confirmed: boolean;
   // Meilleur score parmi les photos où il apparaît.
   confidence?: number;
+  // Total sur toutes les photos (2 sur l'une + 1 sur l'autre = 3).
+  quantity: number;
   categories: CategoryKey[];
   refs: ItemRef[];
 };
@@ -210,6 +233,7 @@ export function collectIngredients(photos: StoredPhoto[]) {
         name: item.name,
         confirmed: item.confirmed,
         confidence: item.confidence,
+        quantity: 0,
         categories: [],
         refs: [],
       };
@@ -217,6 +241,7 @@ export function collectIngredients(photos: StoredPhoto[]) {
       const category = photo.category ?? "uncategorized";
       if (!group.categories.includes(category)) group.categories.push(category);
       group.refs.push({ photoId: photo.id, name: item.name });
+      group.quantity += itemQuantity(item);
       if ((item.confidence ?? 1) > (group.confidence ?? 1)) {
         group.confidence = item.confidence;
       }

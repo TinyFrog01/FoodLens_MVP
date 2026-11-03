@@ -8,7 +8,7 @@ import { useRouter } from "expo-router";
 
 import RecipeCard from "../../components/RecipeCard";
 
-import { recipes } from "@/app/Food/data/recipe/recipe";
+import { ricardoRecipes as recipes } from "@/app/Food/data/recipe/recipe_r";
 
 export default function Home() {
   const router = useRouter();

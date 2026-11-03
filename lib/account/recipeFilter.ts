@@ -6,14 +6,27 @@ import {
   applianceLabel,
   dietLabel,
 } from "@/constants/dietary";
-import type { Recipe } from "@/app/Food/data/recipe/recipe";
+import type { Recipe } from "@/app/Food/data/recipe/types";
 
 import { Account, Member, RecipeCustomization, SELF_ID } from "./types";
 
 // ─────────────────────────────────────────────
 // Texte : « Oignons verts » doit correspondre à « oignon », « Œufs » à « oeuf ».
 // ─────────────────────────────────────────────
+// Les mêmes noms reviennent pour chaque recette × chaque terme : avec des
+// milliers de recettes, les redécouper à chaque fois figeait le fil.
+const wordsCache = new Map<string, string[]>();
+
 function normalizeWords(text: string): string[] {
+  let words = wordsCache.get(text);
+  if (!words) {
+    words = splitWords(text);
+    wordsCache.set(text, words);
+  }
+  return words;
+}
+
+function splitWords(text: string): string[] {
   return text
     .toLowerCase()
     .replace(/œ/g, "oe")

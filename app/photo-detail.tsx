@@ -12,14 +12,18 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { usePhotos } from "@/hooks/usePhotos";
+import { confirmAction } from "@/lib/confirm";
 import {
   CONFIDENCE_THRESHOLD,
   countItems,
+  describeItems,
   DetectedItem,
 } from "@/lib/ingredientDetection";
 import {
   analyzePhoto,
   CategoryKey,
+  deletePhotoMessage,
+  deletePhotos,
   reviewItems,
   StoredPhoto as Photo,
 } from "@/lib/photoStore";
@@ -68,6 +72,16 @@ export default function PhotoDetail() {
     reviewItems([{ photoId: data.id, name: item.name }], action).catch(
       console.error
     );
+
+  const handleDelete = () =>
+    confirmAction({
+      title: "Supprimer cette photo ?",
+      message: deletePhotoMessage(data),
+      confirmLabel: "Supprimer",
+      destructive: true,
+      onConfirm: () =>
+        deletePhotos([data.id]).then(() => router.back(), console.error),
+    });
 
   const renderAnalysisState = () => {
     if (data.detection === "pending") {
@@ -183,7 +197,7 @@ export default function PhotoDetail() {
                 <View style={styles.itemLeft}>
                   <View style={[styles.itemDot, { backgroundColor: "#E85C41" }]} />
                   <Text style={styles.itemName} numberOfLines={1}>
-                    {item.name}
+                    {describeItems([item])}
                   </Text>
                   {formatConfidence(item) && (
                     <Text style={styles.itemConfidence}>
@@ -229,7 +243,7 @@ export default function PhotoDetail() {
                 <View style={styles.itemLeft}>
                   <View style={[styles.itemDot, { backgroundColor: "#37B24D" }]} />
                   <Text style={styles.itemName} numberOfLines={1}>
-                    {item.name}
+                    {describeItems([item])}
                   </Text>
                   {formatConfidence(item) && (
                     <Text style={styles.itemConfidence}>
@@ -267,6 +281,12 @@ export default function PhotoDetail() {
           </View>
         </View>
       </View>
+
+      {/* ✅ Supprime la photo et les ingrédients trouvés dessus */}
+      <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+        <Ionicons name="trash-outline" size={18} color="#E85C41" />
+        <Text style={styles.deleteButtonText}>Supprimer la photo</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -531,5 +551,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#1C1C1A",
     fontWeight: "700",
+  },
+
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFE9E3",
+    paddingVertical: 14,
+    borderRadius: 30,
+  },
+
+  deleteButtonText: {
+    marginLeft: 8,
+    color: "#E85C41",
+    fontWeight: "700",
+    fontSize: 15,
   },
 });

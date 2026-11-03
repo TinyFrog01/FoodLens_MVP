@@ -1,4 +1,4 @@
-import type { Recipe } from "@/app/Food/data/recipe/recipe";
+import type { Recipe } from "@/app/Food/data/recipe/types";
 
 // Portions d'origine de la recette (certaines recettes n'en indiquent pas).
 export const recipeServings = (recipe: Recipe) =>

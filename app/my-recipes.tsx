@@ -5,7 +5,8 @@ import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getRecipePhoto } from "@/app/Food/data/recipe/photos";
-import { Recipe, recipes } from "@/app/Food/data/recipe/recipe";
+import { ricardoRecipes as recipes } from "@/app/Food/data/recipe/recipe_r";
+import type { Recipe } from "@/app/Food/data/recipe/types";
 import TopBar from "@/components/account/TopBar";
 import { CardShadow, Palette, TextStyles } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
@@ -122,7 +123,7 @@ export default function MyRecipes() {
             onPress={() => router.push(`/recipe/${item.recipe.id}`)}
             style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
           >
-            <Image source={getRecipePhoto(item.recipe.id)} style={styles.thumb} />
+            <Image source={getRecipePhoto(item.recipe.id, item.recipe.image)} style={styles.thumb} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.title} numberOfLines={2}>
                 {item.recipe.title}

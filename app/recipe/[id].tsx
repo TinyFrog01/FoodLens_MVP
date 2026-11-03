@@ -1,4 +1,4 @@
-import { recipes } from "@/app/Food/data/recipe/recipe";
+import { ricardoRecipes as recipes } from "@/app/Food/data/recipe/recipe_r";
 import { isIngredientOnHand } from "@/app/Food/data/utils/ingredients";
 import CookingMode from "@/components/CookingMode";
 import Avatar from "@/components/account/Avatar";
@@ -264,7 +264,7 @@ export default function RecipePage() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         keyboardShouldPersistTaps="handled"
       >
-      <Image source={getRecipePhoto(recipe.id)} style={styles.image} />
+      <Image source={getRecipePhoto(recipe.id, recipe.image)} style={styles.image} />
         <View style={styles.content}>
           {custom && (
             <View style={styles.versionPill}>

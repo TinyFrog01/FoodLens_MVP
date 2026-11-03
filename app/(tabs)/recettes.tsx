@@ -13,8 +13,15 @@ import {
 import CompletionBar from "@/components/CompletionBar";
 import AvatarButton from "@/components/account/AvatarButton";
 import { usePhotos } from "@/hooks/usePhotos";
+import { confirmAction } from "@/lib/confirm";
 import { countItems } from "@/lib/ingredientDetection";
-import { CategoryKey, StoredPhoto as Photo } from "@/lib/photoStore";
+import {
+  CategoryKey,
+  categoryOf,
+  deletePhotoMessage,
+  deletePhotos,
+  StoredPhoto as Photo,
+} from "@/lib/photoStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
 import { useRouter } from "expo-router";
@@ -57,10 +64,7 @@ export default function Recette() {
       uncategorized: [],
     };
 
-    photos.forEach((p) => {
-      const key = p.category && map[p.category] ? p.category : "uncategorized";
-      map[key].push(p);
-    });
+    photos.forEach((p) => map[categoryOf(p)].push(p));
 
     return map;
   }, [photos]);
@@ -200,6 +204,15 @@ export default function Recette() {
       });
     };
 
+    const handleDelete = () =>
+      confirmAction({
+        title: "Supprimer cette photo ?",
+        message: deletePhotoMessage(item),
+        confirmLabel: "Supprimer",
+        destructive: true,
+        onConfirm: () => deletePhotos([item.id]).catch(console.error),
+      });
+
     return (
       <TouchableOpacity
         key={item.id}
@@ -226,6 +239,16 @@ export default function Recette() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Ionicons name="refresh" size={16} color="white" />
+          </TouchableOpacity>
+
+          {/* ✅ Supprimer la photo (et ses ingrédients), coin opposé */}
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Supprimer la photo"
+          >
+            <Ionicons name="trash-outline" size={16} color="white" />
           </TouchableOpacity>
         </View>
 
@@ -276,6 +299,32 @@ export default function Recette() {
       0
     );
 
+    // ✅ Reprendre toute la catégorie : la caméra s'ouvre sur cette catégorie
+    // et, à l'enregistrement, les nouvelles photos remplacent les anciennes.
+    // Rien n'est supprimé si l'utilisateur ferme la caméra sans enregistrer.
+    const handleRedoCategory = () =>
+      router.push({
+        pathname: "/camera",
+        params: {
+          replaceCategory: categoryKey,
+          ...(categoryKey !== "uncategorized" ? { category: categoryKey } : {}),
+        },
+      });
+
+    const handleDeleteCategory = () =>
+      confirmAction({
+        title:
+          items.length > 1
+            ? `Supprimer les ${items.length} photos « ${config.label} » ?`
+            : `Supprimer la photo « ${config.label} » ?`,
+        message:
+          "Les aliments trouvés dessus seront retirés de ta liste. Ceux aussi vus sur d'autres photos y restent.",
+        confirmLabel: "Tout supprimer",
+        destructive: true,
+        onConfirm: () =>
+          deletePhotos(items.map((p) => p.id)).catch(console.error),
+      });
+
     return (
       <View
         key={categoryKey}
@@ -292,15 +341,36 @@ export default function Recette() {
 
           <View style={styles.sectionTitleWrap}>
             <Text style={styles.sectionTitle}>{config.label}</Text>
-            <Text style={styles.sectionSubtitle}>
+            <Text style={styles.sectionSubtitle} numberOfLines={1}>
               {items.length} photo{items.length !== 1 ? "s" : ""}
+              {totalCount > 0 && (
+                <Text style={styles.sectionCount}>
+                  {` · ${identifiedCount} sur ${totalCount} identifiés`}
+                </Text>
+              )}
             </Text>
           </View>
 
-          {totalCount > 0 && (
-            <Text style={styles.sectionCount}>
-              {identifiedCount} sur {totalCount} identifiés
-            </Text>
+          {items.length > 0 && (
+            <>
+              <TouchableOpacity
+                style={styles.sectionAction}
+                onPress={handleRedoCategory}
+                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                accessibilityLabel={`Reprendre toutes les photos : ${config.label}`}
+              >
+                <Ionicons name="refresh" size={18} color="#1C1C1A" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.sectionAction, styles.sectionActionDanger]}
+                onPress={handleDeleteCategory}
+                hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                accessibilityLabel={`Supprimer toutes les photos : ${config.label}`}
+              >
+                <Ionicons name="trash-outline" size={18} color="#E85C41" />
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
@@ -542,6 +612,21 @@ const styles = StyleSheet.create({
     color: "#37B24D",
   },
 
+  // ✅ Boutons "tout reprendre" / "tout supprimer" de la section.
+  sectionAction: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#EDEDE8",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+
+  sectionActionDanger: {
+    backgroundColor: "#FFE9E3",
+  },
+
   sectionCompletionBar: {
     marginBottom: 14,
   },
@@ -578,6 +663,20 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+
+  // ✅ Bouton supprimer, coin supérieur gauche de la photo.
+  deleteButton: {
+    position: "absolute",
+    top: 8,
+    left: 8,
     width: 30,
     height: 30,
     borderRadius: 15,

@@ -141,7 +141,7 @@ export default function GoldHero({
   return (
     <View style={[styles.page, { height }]}>
       <Animated.Image
-        source={getRecipePhoto(recipe.id)}
+        source={getRecipePhoto(recipe.id, recipe.image)}
         style={[styles.photo, { opacity: photo, transform: [{ scale: zoom }] }]}
       />
       <Scrim />

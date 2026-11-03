@@ -51,9 +51,10 @@ const removeAccent = (str: string) =>
 const categoriesLabel = (ingredient: PhotoIngredient) =>
   ingredient.categories.map((c) => CATEGORY_LABELS[c]).join(", ");
 
-// \u2705 Ajoute \u00e0 l'inventaire les ingr\u00e9dients confirm\u00e9s sur les photos : +1 par
-// photo pour un aliment d\u00e9j\u00e0 list\u00e9, sinon une nouvelle entr\u00e9e rang\u00e9e selon
-// la cat\u00e9gorie de la photo. Tri\u00e9 pour que les lettres restent dans l'ordre.
+// \u2705 Ajoute \u00e0 l'inventaire les ingr\u00e9dients confirm\u00e9s sur les photos : + la
+// quantit\u00e9 vue sur chaque photo pour un aliment d\u00e9j\u00e0 list\u00e9, sinon une nouvelle
+// entr\u00e9e rang\u00e9e selon la cat\u00e9gorie de la photo. Tri\u00e9 pour que les lettres
+// restent dans l'ordre.
 const mergeInventory = (base: Item[], detected: PhotoIngredient[]) => {
   const merged = base.map((item) => ({ ...item }));
 
@@ -62,7 +63,7 @@ const mergeInventory = (base: Item[], detected: PhotoIngredient[]) => {
     const existing = merged.find((item) => normalizeName(item.name) === key);
 
     if (existing) {
-      existing.quantity += ingredient.refs.length;
+      existing.quantity += ingredient.quantity;
       existing.fromPhoto = true;
       return;
     }
@@ -71,7 +72,7 @@ const mergeInventory = (base: Item[], detected: PhotoIngredient[]) => {
       id: `photo-${ingredient.key}`,
       name: ingredient.name,
       location: categoriesLabel(ingredient),
-      quantity: ingredient.refs.length,
+      quantity: ingredient.quantity,
       fromPhoto: true,
     });
   });

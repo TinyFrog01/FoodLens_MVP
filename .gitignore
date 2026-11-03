@@ -36,4 +36,10 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# output of npm run scrape:recipes (~9 MB, regenerate it instead)
+scripts/wikibooks-recipes.json
+# output of npm run scrape:ricardo (regenerate it instead)
+scripts/ricardo-recipes.json
+scripts/ricardo-recipes.json.tmp
+
 app-example

@@ -29,9 +29,19 @@ export type DetectedItem = {
   confidence?: number;
   // false = "à vérifier" (sous le seuil, ou pas encore validé à la main).
   confirmed: boolean;
+  // Nombre vu sur la photo (2 pommes = 2). Absent sur les anciennes photos.
+  quantity?: number;
 };
 
 export type DetectionStatus = "pending" | "done" | "error";
+
+export const itemQuantity = (item: DetectedItem) => item.quantity ?? 1;
+
+// "Pomme ×2, Lait"
+export const describeItems = (items: DetectedItem[] = []) =>
+  items
+    .map((i) => (itemQuantity(i) > 1 ? `${i.name} ×${itemQuantity(i)}` : i.name))
+    .join(", ");
 
 export const countItems = (items: DetectedItem[] = []) => {
   const identified = items.filter((i) => i.confirmed).length;
@@ -65,6 +75,7 @@ const LIST_KEYS = [
 ];
 const NAME_KEYS = ["name", "ingredient", "label", "item", "food", "class_name", "class"];
 const CONFIDENCE_KEYS = ["confidence", "score", "probability", "certainty", "conf"];
+const QUANTITY_KEYS = ["quantity", "count", "qty"];
 const WORD_CONFIDENCE: Record<string, number> = { high: 0.9, medium: 0.6, low: 0.3 };
 
 const toConfidence = (value: unknown): number | undefined => {
@@ -78,6 +89,11 @@ const toConfidence = (value: unknown): number | undefined => {
   // Certaines API répondent en pourcentage (0–100).
   const ratio = value > 1 ? value / 100 : value;
   return Math.min(1, Math.max(0, ratio));
+};
+
+const toQuantity = (value: unknown): number | undefined => {
+  const n = typeof value === "string" ? parseFloat(value) : value;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? n : undefined;
 };
 
 // Le modèle peut renvoyer son JSON entouré de ```json ... ```.
@@ -127,6 +143,7 @@ const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 const toDetectedItem = (raw: unknown): DetectedItem | null => {
   let name: unknown;
   let confidence: number | undefined;
+  let quantity: number | undefined;
 
   if (typeof raw === "string") {
     name = raw;
@@ -137,6 +154,9 @@ const toDetectedItem = (raw: unknown): DetectedItem | null => {
     confidence = CONFIDENCE_KEYS.map((k) => toConfidence(raw[k])).find(
       (v) => v !== undefined
     );
+    quantity = QUANTITY_KEYS.map((k) => toQuantity(raw[k])).find(
+      (v) => v !== undefined
+    );
   }
 
   if (typeof name !== "string" || !name.trim()) return null;
@@ -145,21 +165,29 @@ const toDetectedItem = (raw: unknown): DetectedItem | null => {
     name: capitalize(name.trim()),
     confidence,
     confirmed: confidence === undefined || confidence >= CONFIDENCE_THRESHOLD,
+    quantity: quantity ?? 1,
   };
 };
 
-// Un même ingrédient peut sortir plusieurs fois : on garde le meilleur score.
+// Un même ingrédient peut sortir plusieurs fois (ex: une détection par
+// pomme) : on additionne les quantités et on garde le meilleur score.
 const dedupe = (items: DetectedItem[]) => {
   const byName = new Map<string, DetectedItem>();
 
   items.forEach((item) => {
     const key = normalizeName(item.name);
     const existing = byName.get(key);
-    const score = item.confidence ?? 1;
-
-    if (!existing || score > (existing.confidence ?? 1)) {
+    if (!existing) {
       byName.set(key, item);
+      return;
     }
+
+    const best =
+      (item.confidence ?? 1) > (existing.confidence ?? 1) ? item : existing;
+    byName.set(key, {
+      ...best,
+      quantity: itemQuantity(existing) + itemQuantity(item),
+    });
   });
 
   return [...byName.values()];

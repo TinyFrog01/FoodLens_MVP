@@ -1,4 +1,4 @@
-import type { Recipe } from "@/app/Food/data/recipe/recipe";
+import type { Recipe } from "@/app/Food/data/recipe/types";
 import type { Staple } from "@/app/Food/data/staples";
 import { isIngredientOnHand } from "@/app/Food/data/utils/ingredients";
 import { parseMinutes, RecipeVerdict } from "@/lib/account/recipeFilter";

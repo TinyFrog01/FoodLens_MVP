@@ -1,8 +1,18 @@
-import React, { useMemo, useState } from "react";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Dimensions,
+  AccessibilityInfo,
+  Animated,
+  Easing,
   FlatList,
+  GestureResponderEvent,
   Image,
+  LayoutChangeEvent,
+  ListViewToken,
+  Pressable,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,71 +20,64 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { getRecipePhoto } from "@/app/Food/data/recipe/photos";
+import type { Recipe } from "@/app/Food/data/recipe/types";
 import { staples } from "@/app/Food/data/staples";
-
 import { isIngredientOnHand } from "@/app/Food/data/utils/ingredients";
+import Scrim from "@/components/Scrim";
 import AvatarButton from "@/components/account/AvatarButton";
 import { CookingForPill, CookingForSheet } from "@/components/account/CookingFor";
+import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
 import { applianceLabel } from "@/constants/dietary";
+import { Palette } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
 import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
+import { useLightStatusBar } from "@/hooks/useLightStatusBar";
 import { useRecipeFeed } from "@/hooks/useRecipeFeed";
-import { RecipeVerdict, displayDiets } from "@/lib/account/recipeFilter";
+import { RecipeVerdict } from "@/lib/account/recipeFilter";
+import { confirmAction } from "@/lib/confirm";
 import { rankByFridge } from "@/lib/fridgeRanking";
 
-const { height, width } = Dimensions.get("window");
+// Deux touches plus rapprochées que ça : un « J'aime », comme sur TikTok. Une
+// seule touche ouvre la recette, une fois ce délai passé.
+const DOUBLE_TAP_MS = 260;
+// Le plat avance doucement vers toi tant que sa carte est à l'écran : la photo
+// vit comme une vidéo.
+const DRIFT_MS = 9000;
+// L'invite « Glisse vers le haut » n'apparaît que si on s'attarde sur la
+// première carte.
+const HINT_DELAY_MS = 1800;
+// Photos chargées d'avance : pas d'écran noir en glissant.
+const PREFETCH_AHEAD = 3;
+const INGREDIENT_CHIPS = 4;
+const RAIL_WIDTH = 72;
+// Le rail monte au-dessus du pouce, qui tient le téléphone en bas à droite.
+const RAIL_LIFT = 150;
+const BURST_SIZE = 110;
+// La carte affichée : celle qui occupe plus de la moitié de l'écran.
+const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
+
+// Une fois par lancement : l'invite disparaît dès le premier glissement.
+let swipeHintDone = false;
 
 
 /* ---------------- BADGE ---------------- */
 
 const getBadge = (missing: number) => {
-  if (missing <= 0) {
-    return {
-      text: "Tous",
-      color: "#18A64B",
-    };
-  }
-
-  if (missing === 1) {
-    return {
-      text: "1",
-      color: "#F5C542",
-    };
-  }
-
-  if (missing === 2) {
-    return {
-      text: "2",
-      color: "#F59E0B",
-    };
-  }
-  if (missing === 3) {
-    return {
-      text: "3",
-      color: "#F97316",
-    };
-  }
-
-  if (missing === 4) {
-    return {
-      text: "4",
-      color: "#EA580C",
-    };
-  }
-
-  return {
-    text: "+5",
-    color: "#E53935",
-  };
+  if (missing <= 0) return { text: "Tous", color: "#18A64B" };
+  if (missing === 1) return { text: "1", color: "#F5C542" };
+  if (missing === 2) return { text: "2", color: "#F59E0B" };
+  if (missing === 3) return { text: "3", color: "#F97316" };
+  if (missing === 4) return { text: "4", color: "#EA580C" };
+  return { text: "+5", color: "#E53935" };
 };
 
+// Sous la pastille du rail : « Tous en main », « 1 manquant », « 3 manquants ».
+const badgeCaption = (missing: number) =>
+  missing <= 0 ? "en main" : missing === 1 ? "manquant" : "manquants";
 
 
 /* ---------------- CARD ---------------- */
-
 
 /* Pastilles personnelles : ce que quelqu'un n'aime pas, l'appareil qui
    manque, ce que quelqu'un aime (2 au maximum). */
@@ -116,241 +119,421 @@ const getFlags = (verdict: RecipeVerdict) => {
   return flags.slice(0, 2);
 };
 
+const shareRecipe = (recipe: Recipe) => {
+  Share.share({
+    title: recipe.title,
+    message: recipe.sourceUrl ? `${recipe.title}\n${recipe.sourceUrl}` : recipe.title,
+  }).catch(() => {
+    // partage annulé ou indisponible (web sans navigator.share)
+  });
+};
 
+type Burst = { id: number; x: number; y: number; tilt: number };
 
-const RecipeCard = ({
-  verdict,
-  onPress,
-}: {
-  verdict: RecipeVerdict;
-  onPress: () => void;
-}) => {
+// Cœur qui jaillit là où on a touché deux fois, puis s'envole.
+function HeartBurst({ burst, onDone }: { burst: Burst; onDone: (id: number) => void }) {
+  const [progress] = useState(() => new Animated.Value(0));
 
-  const item = verdict.recipe;
-  const flags = getFlags(verdict);
-  const diets = displayDiets(item).slice(0, 3);
-  const { activeStaples } = useAlwaysOnHand();
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 850,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => onDone(burst.id));
+  }, [progress, burst.id, onDone]);
 
-
-  const available = item.ingredients.filter((ingredient) =>
-    isIngredientOnHand(ingredient.name, activeStaples)
-  );
-
-
-  const missing =
-    item.ingredients.length -
-    available.length;
-
-
-  const badge = getBadge(missing);
-
-
+  const scale = progress.interpolate({
+    inputRange: [0, 0.15, 0.3, 1],
+    outputRange: [0.3, 1.25, 1, 1.35],
+  });
+  const opacity = progress.interpolate({ inputRange: [0, 0.1, 0.6, 1], outputRange: [0, 1, 1, 0] });
+  const rise = progress.interpolate({ inputRange: [0, 1], outputRange: [0, -90] });
 
   return (
-
-    <TouchableOpacity
-      activeOpacity={0.95}
-      style={styles.card}
-      onPress={onPress}
+    <Animated.View
+      style={[
+        styles.burst,
+        {
+          left: burst.x - BURST_SIZE / 2,
+          top: burst.y - BURST_SIZE / 2,
+          opacity,
+          transform: [{ translateY: rise }, { rotate: `${burst.tilt}deg` }, { scale }],
+        },
+      ]}
     >
+      <Ionicons name="heart" size={BURST_SIZE} color={Palette.danger} style={styles.burstIcon} />
+    </Animated.View>
+  );
+}
+
+// Bouton du rail de droite : icône ombrée et petit libellé dessous.
+function RailItem({
+  label,
+  accessibilityLabel,
+  onPress,
+  children,
+}: {
+  label: string;
+  accessibilityLabel: string;
+  onPress?: () => void;
+  children: React.ReactNode;
+}) {
+  const content = (
+    <>
+      {children}
+      <Text style={styles.railLabel} numberOfLines={2}>
+        {label}
+      </Text>
+    </>
+  );
+
+  if (!onPress) {
+    return (
+      <View style={styles.railItem} accessible accessibilityLabel={accessibilityLabel}>
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => [styles.railItem, pressed && { opacity: 0.7 }]}
+    >
+      {content}
+    </Pressable>
+  );
+}
+
+type CardProps = {
+  verdict: RecipeVerdict;
+  width: number;
+  height: number;
+  topInset: number;
+  bottomInset: number;
+  // carte à l'écran (et onglet affiché) : la photo s'anime
+  active: boolean;
+  liked: boolean;
+  guest: boolean;
+  reduceMotion: boolean;
+  onOpen: (id: string) => void;
+  onToggleLike: (id: string) => void;
+  onDoubleTapLike: (id: string) => void;
+  onShare: (recipe: Recipe) => void;
+};
+
+const RecipeCard = memo(function RecipeCard({
+  verdict,
+  width,
+  height,
+  topInset,
+  bottomInset,
+  active,
+  liked,
+  guest,
+  reduceMotion,
+  onOpen,
+  onToggleLike,
+  onDoubleTapLike,
+  onShare,
+}: CardProps) {
+  const item = verdict.recipe;
+  const flags = getFlags(verdict);
+  const { activeStaples } = useAlwaysOnHand();
+
+  const onHand = item.ingredients.map((ingredient) =>
+    isIngredientOnHand(ingredient.name, activeStaples)
+  );
+  const missing = onHand.filter((have) => !have).length;
+  const badge = getBadge(missing);
+  const moreIngredients = item.ingredients.length - INGREDIENT_CHIPS;
+
+  // ── La photo avance et recule lentement tant que la carte est affichée ──
+  const [drift] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    // Hors écran, elle reste où elle en est : pas de saut pendant le glissement.
+    if (!active || reduceMotion) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(drift, {
+          toValue: 1,
+          duration: DRIFT_MS,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(drift, {
+          toValue: 0,
+          duration: DRIFT_MS,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [active, reduceMotion, drift]);
+  const zoom = drift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] });
+
+  // ── Le cœur du rail rebondit quand la recette devient favorite ──
+  const [pop] = useState(() => new Animated.Value(1));
+  const wasLiked = useRef(liked);
+  useEffect(() => {
+    if (liked && !wasLiked.current && !reduceMotion) {
+      pop.setValue(0.5);
+      Animated.spring(pop, { toValue: 1, friction: 3, tension: 180, useNativeDriver: true }).start();
+    }
+    wasLiked.current = liked;
+  }, [liked, reduceMotion, pop]);
+
+  // ── Une touche : ouvrir. Deux touches : J'aime, avec un cœur à cet endroit ──
+  const [bursts, setBursts] = useState<Burst[]>([]);
+  const nextBurst = useRef(0);
+  const lastTap = useRef(0);
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (openTimer.current) clearTimeout(openTimer.current);
+    },
+    []
+  );
+
+  const removeBurst = useCallback(
+    (id: number) => setBursts((list) => list.filter((b) => b.id !== id)),
+    []
+  );
+
+  const onPhotoPress = (event: GestureResponderEvent) => {
+    const now = Date.now();
+    if (now - lastTap.current > DOUBLE_TAP_MS) {
+      lastTap.current = now;
+      openTimer.current = setTimeout(() => {
+        openTimer.current = null;
+        onOpen(item.id);
+      }, DOUBLE_TAP_MS);
+      return;
+    }
+
+    // Chaque touche rapide qui suit ajoute un cœur, comme sur TikTok.
+    lastTap.current = now;
+    if (openTimer.current) clearTimeout(openTimer.current);
+    openTimer.current = null;
+
+    if (!guest) {
+      // Sur le web, c'est l'événement du navigateur : offsetX au lieu de locationX.
+      const { locationX, locationY, offsetX, offsetY } = event.nativeEvent as typeof event.nativeEvent & {
+        offsetX?: number;
+        offsetY?: number;
+      };
+      if (process.env.EXPO_OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+      if (!reduceMotion) {
+        setBursts((list) => [
+          ...list.slice(-3),
+          {
+            id: nextBurst.current++,
+            x: locationX ?? offsetX ?? width / 2,
+            y: locationY ?? offsetY ?? height / 2,
+            tilt: Math.random() * 40 - 20,
+          },
+        ]);
+      }
+    }
+    onDoubleTapLike(item.id);
+  };
+
+  const onHeartPress = () => {
+    if (!guest && !liked && process.env.EXPO_OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onToggleLike(item.id);
+  };
+
+  return (
+    <View style={[styles.card, { width, height }]}>
+
+      {/* PHOTO */}
+
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onPhotoPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Voir la recette : ${item.title}`}
+      >
+        <Animated.Image
+          source={getRecipePhoto(item.id, item.image)}
+          style={[styles.image, { transform: [{ scale: zoom }] }]}
+        />
+      </Pressable>
+
+      <Scrim edge="top" height={topInset + 90} strength={0.4} />
+      <Scrim height="60%" strength={0.85} />
+
+      {bursts.map((burst) => (
+        <HeartBurst key={burst.id} burst={burst} onDone={removeBurst} />
+      ))}
 
 
-      {/* IMAGE */}
+      {/* LÉGENDE */}
 
-     
-
-<Image
-  source={getRecipePhoto(item.id)}
-  style={styles.image}
-/>
-
-
-
-      {/* DARK OVERLAY */}
-
-      <View style={styles.overlay}/>
-
-
-
-      {/* CONTENT */}
-
-      <View style={styles.content}>
-
-
-        {/* PERSONAL FLAGS */}
-
-        {flags.length > 0 && (
-          <View style={styles.flags}>
-            {flags.map((flag) => (
-              <View
-                key={flag.key}
-                style={[styles.flag, { backgroundColor: flag.color }]}
-              >
-                <Ionicons name={flag.icon} size={13} color="#fff" />
-                <Text style={styles.flagText}>{flag.text}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-
-        <Text style={styles.title}>
-          {item.title}
-        </Text>
-
-
-
-        {/* DIET TAGS */}
-
-        {diets.length > 0 && (
-          <View style={styles.diets}>
-            {diets.map((diet) => (
-              <View key={diet} style={styles.dietChip}>
-                <Text style={styles.dietText}>{diet}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-
-
-        <View style={styles.row}>
-
-
-          <Ionicons
-            name="time-outline"
-            size={18}
-            color="white"
-          />
-
-
-          <Text style={styles.text}>
-            {item.time}
+      <View style={[styles.caption, { paddingBottom: bottomInset + 16 }]}>
+        <Pressable onPress={() => onOpen(item.id)} accessible={false}>
+          <Text style={styles.title} numberOfLines={3}>
+            {item.title}
           </Text>
 
+          {/* PERSONAL FLAGS */}
 
+          {flags.length > 0 && (
+            <View style={styles.flags}>
+              {flags.map((flag) => (
+                <View key={flag.key} style={[styles.flag, { backgroundColor: flag.color }]}>
+                  <Ionicons name={flag.icon} size={13} color="#fff" />
+                  <Text style={styles.flagText} numberOfLines={1}>
+                    {flag.text}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
 
-          <View
-            style={[
-              styles.badge,
-              {
-                backgroundColor:
-                  badge.color,
-              },
-            ]}
-          >
+          {/* INGREDIENT CHIPS */}
 
-            <Text style={styles.badgeText}>
-              {badge.text}
-            </Text>
-
-          </View>
-
-
-
-
-          <MaterialCommunityIcons
-            name="leaf"
-            size={18}
-            color={
-              item.vegan
-                ? "#4CAF50"
-                : "#999"
-            }
-            style={{
-              marginLeft:10,
-            }}
-          />
-
-        </View>
-
-
-
-
-        {/* INGREDIENT CHIPS */}
-
-
-        <View style={styles.ingredients}>
-
-
-          {item.ingredients
-            .slice(0,4)
-            .map((ingredient) => {
-
-
-            const available =
-              isIngredientOnHand(
-                ingredient.name,
-                activeStaples
-              );
-
-
-
-            return (
-
+          <View style={styles.ingredients}>
+            {item.ingredients.slice(0, INGREDIENT_CHIPS).map((ingredient, i) => (
               <View
-                key={ingredient.name}
-                style={[
-                  styles.ingChip,
-                  {
-                    backgroundColor:
-                    available
-                    ? "#18A64B"
-                    : "#E53935",
-                  },
-                ]}
+                key={`${ingredient.name}-${i}`}
+                style={[styles.ingChip, onHand[i] ? styles.ingHave : styles.ingMissing]}
               >
-
-                <Text style={styles.ingText}>
-                  {ingredient.name} 
+                <Text style={styles.ingText} numberOfLines={1}>
+                  {ingredient.name}
                 </Text>
-
-
               </View>
+            ))}
+            {moreIngredients > 0 && (
+              <View style={[styles.ingChip, styles.ingMore]}>
+                <Text style={styles.ingText}>+{moreIngredients}</Text>
+              </View>
+            )}
+          </View>
+        </Pressable>
 
-            );
-
-          })}
-
-
-        </View>
-
-
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={onPress}
-        >
-
-          <Text style={styles.buttonText}>
-            Voir la recette
-          </Text>
-
+        <TouchableOpacity style={styles.button} onPress={() => onOpen(item.id)}>
+          <Text style={styles.buttonText}>Voir la recette</Text>
+          <Ionicons name="arrow-forward" size={18} color={Palette.ink} />
         </TouchableOpacity>
-
-
-
       </View>
 
 
-    </TouchableOpacity>
+      {/* RAIL : favori, temps, ingrédients manquants, partage */}
 
+      <View style={[styles.rail, { bottom: bottomInset + RAIL_LIFT }]}>
+        <RailItem
+          label={liked ? "Favori" : "J'aime"}
+          accessibilityLabel={liked ? "Retirer des favoris" : "Ajouter aux favoris"}
+          onPress={onHeartPress}
+        >
+          <Animated.View style={{ transform: [{ scale: pop }] }}>
+            <Ionicons
+              name="heart"
+              size={38}
+              color={liked ? Palette.danger : "#FFFFFF"}
+              style={styles.railIcon}
+            />
+          </Animated.View>
+        </RailItem>
+
+        <RailItem label={item.time} accessibilityLabel={`Temps : ${item.time}`}>
+          <Ionicons name="time" size={34} color="#FFFFFF" style={styles.railIcon} />
+        </RailItem>
+
+        <RailItem
+          label={badgeCaption(missing)}
+          accessibilityLabel={
+            missing <= 0
+              ? "Tu as tous les ingrédients"
+              : `${missing} ingrédient${missing > 1 ? "s" : ""} manquant${missing > 1 ? "s" : ""}`
+          }
+        >
+          <View style={[styles.badge, { backgroundColor: badge.color }]}>
+            <Text style={styles.badgeText}>{badge.text}</Text>
+          </View>
+        </RailItem>
+
+        <RailItem label="Partager" accessibilityLabel="Partager la recette" onPress={() => onShare(item)}>
+          <Ionicons name="arrow-redo" size={34} color="#FFFFFF" style={styles.railIcon} />
+        </RailItem>
+      </View>
+
+    </View>
   );
-};
+});
 
 
+/* ---------------- SWIPE HINT ---------------- */
 
+// Si on reste sur la première carte : une flèche qui invite à glisser.
+function SwipeHint({ reduceMotion }: { reduceMotion: boolean }) {
+  const [shown] = useState(() => new Animated.Value(0));
+  const [bounce] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    const appear = Animated.timing(shown, {
+      toValue: 1,
+      duration: 300,
+      delay: HINT_DELAY_MS,
+      useNativeDriver: true,
+    });
+    const nudge = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounce, {
+          toValue: 1,
+          duration: 520,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounce, {
+          toValue: 0,
+          duration: 520,
+          easing: Easing.in(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    appear.start();
+    if (!reduceMotion) nudge.start();
+    return () => {
+      appear.stop();
+      nudge.stop();
+    };
+  }, [shown, bounce, reduceMotion]);
+
+  const lift = bounce.interpolate({ inputRange: [0, 1], outputRange: [0, -14] });
+
+  return (
+    <Animated.View style={[styles.hint, { opacity: shown }]}>
+      <Animated.View style={{ transform: [{ translateY: lift }] }}>
+        <Ionicons name="chevron-up" size={34} color="#FFFFFF" style={styles.railIcon} />
+      </Animated.View>
+      <Text style={styles.hintText}>Glisse vers le haut</Text>
+    </Animated.View>
+  );
+}
 
 
 /* ---------------- FEED ---------------- */
 
-
-export default function RecipeFeed(){
-
-
+export default function RecipeFeed() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { account } = useAccount();
+  // Hauteur de la barre d'onglets posée sur le fil (iOS), 0 ailleurs.
+  const tabBarOverlap = useBottomTabOverflow();
+  const { account, toggleFavorite, updateAccount } = useAccount();
 
   // Recettes filtrées pour les personnes choisies (tout, en mode invité)
   const { visible } = useRecipeFeed();
@@ -364,11 +547,149 @@ export default function RecipeFeed(){
   const [sheetOpen, setSheetOpen] = useState(false);
   const isEmpty = visible.length === 0;
 
+  // Une carte = tout l'écran au-dessus des onglets, mesuré plutôt que
+  // Dimensions (qui compte aussi la barre d'onglets sur Android).
+  const [page, setPage] = useState({ width: 0, height: 0 });
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [focused, setFocused] = useState(true);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [hintPending, setHintPending] = useState(!swipeHintDone);
 
+  const signedIn = account !== null;
+  const favorites = account?.favorites;
+
+  useLightStatusBar(!isEmpty);
+
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, [])
+  );
+
+  // « Réduire les animations » : ni zoom, ni cœurs, ni flèche qui rebondit.
+  useEffect(() => {
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .catch(() => false)
+      .then((on) => {
+        if (!cancelled) setReduceMotion(on);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // À chaque carte : un léger déclic, et les photos suivantes se chargent.
+  const lastIndex = useRef(0);
+  const prefetched = useRef(new Set<string>());
+  useEffect(() => {
+    if (activeIndex !== lastIndex.current && process.env.EXPO_OS !== "web") {
+      Haptics.selectionAsync();
+    }
+    lastIndex.current = activeIndex;
+
+    feed.slice(activeIndex + 1, activeIndex + 1 + PREFETCH_AHEAD).forEach(({ recipe }) => {
+      if (!recipe.image.startsWith("http") || prefetched.current.has(recipe.image)) return;
+      prefetched.current.add(recipe.image);
+      Image.prefetch(recipe.image).catch(() => {});
+    });
+  }, [activeIndex, feed]);
+
+  const dismissHint = useCallback(() => {
+    swipeHintDone = true;
+    setHintPending(false);
+  }, []);
+
+  // Ne doit jamais changer d'un rendu à l'autre (exigence de FlatList).
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ListViewToken[] }) => {
+      const index = viewableItems[0]?.index;
+      if (index == null) return;
+      setActiveIndex(index);
+      // arrivé plus loin sans glisser du doigt (molette, clavier) : l'invite a servi
+      if (index > 0) dismissHint();
+    },
+    [dismissHint]
+  );
+
+  const onLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    setPage((p) => (p.width === width && p.height === height ? p : { width, height }));
+  };
+
+  const askForAccount = useCallback(
+    () =>
+      confirmAction({
+        title: "Crée ton compte gratuit",
+        message: "Tes recettes favorites seront enregistrées et faciles à retrouver.",
+        confirmLabel: "Créer mon compte",
+        cancelLabel: "Plus tard",
+        onConfirm: () => router.push({ pathname: "/auth", params: { mode: "signup" } }),
+      }),
+    [router]
+  );
+
+  const openRecipe = useCallback((id: string) => router.push(`/recipe/${id}`), [router]);
+
+  const toggleLike = useCallback(
+    (id: string) => (signedIn ? toggleFavorite(id) : askForAccount()),
+    [signedIn, toggleFavorite, askForAccount]
+  );
+
+  // Toucher deux fois ajoute aux favoris, sans jamais retirer.
+  const likeOnce = useCallback(
+    (id: string) =>
+      signedIn
+        ? updateAccount((a) =>
+            a.favorites.includes(id) ? a : { ...a, favorites: [id, ...a.favorites] }
+          )
+        : askForAccount(),
+    [signedIn, updateAccount, askForAccount]
+  );
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: RecipeVerdict; index: number }) => (
+      <RecipeCard
+        verdict={item}
+        width={page.width}
+        height={page.height}
+        topInset={insets.top}
+        bottomInset={tabBarOverlap}
+        active={focused && index === activeIndex}
+        liked={favorites?.includes(item.recipe.id) ?? false}
+        guest={!signedIn}
+        reduceMotion={reduceMotion}
+        onOpen={openRecipe}
+        onToggleLike={toggleLike}
+        onDoubleTapLike={likeOnce}
+        onShare={shareRecipe}
+      />
+    ),
+    [
+      page,
+      insets.top,
+      tabBarOverlap,
+      focused,
+      activeIndex,
+      favorites,
+      signedIn,
+      reduceMotion,
+      openRecipe,
+      toggleLike,
+      likeOnce,
+    ]
+  );
+
+  const getItemLayout = useCallback(
+    (_: unknown, index: number) => ({ length: page.height, offset: page.height * index, index }),
+    [page.height]
+  );
+
+  const showHint = hintPending && focused && activeIndex === 0 && feed.length > 1;
 
   return (
-
-    <View style={styles.page}>
+    <View style={[styles.page, !isEmpty && styles.pageDark]} onLayout={onLayout}>
 
       {isEmpty ? (
 
@@ -398,48 +719,31 @@ export default function RecipeFeed(){
           </TouchableOpacity>
         </View>
 
-      ) : (
+      ) : page.height > 0 && (
 
         <FlatList
-
           data={feed}
-
-
-          keyExtractor={(item)=>item.recipe.id}
-
-
-          renderItem={({item})=>(
-
-            <RecipeCard
-
-              verdict={item}
-
-              onPress={()=>
-                router.push(
-                  `/recipe/${item.recipe.id}`
-                )
-              }
-
-            />
-
-          )}
-
-
+          keyExtractor={(item) => item.recipe.id}
+          renderItem={renderItem}
+          getItemLayout={getItemLayout}
+          // Une carte par glissement, même lancé fort.
           pagingEnabled
-
-
-          snapToInterval={height}
-
-
+          snapToInterval={page.height}
+          snapToAlignment="start"
           decelerationRate="fast"
-
-
+          disableIntervalMomentum
+          onScrollBeginDrag={dismissHint}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={VIEWABILITY}
+          initialNumToRender={2}
+          maxToRenderPerBatch={2}
+          windowSize={5}
           showsVerticalScrollIndicator={false}
-
         />
 
       )}
 
+      {showHint && <SwipeHint reduceMotion={reduceMotion} />}
 
 
       {/* TOP BAR : pour qui je cuisine + compte */}
@@ -461,267 +765,157 @@ export default function RecipeFeed(){
       )}
 
     </View>
-
   );
-
 }
-
-
-
 
 
 /* ---------------- STYLES ---------------- */
 
+const textShadow = {
+  textShadowColor: "rgba(0,0,0,0.45)",
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 6,
+};
 
 const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: Palette.bg },
+  pageDark: { backgroundColor: Palette.ink },
 
-
-  page:{
-    flex:1,
-    backgroundColor:"#F7F6F3",
+  topBar: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 
+  // ── Carte ──
+  card: { backgroundColor: Palette.ink, overflow: "hidden" },
+  image: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%" },
 
-
-  topBar:{
-    position:"absolute",
-    left:16,
-    right:16,
-    flexDirection:"row",
-    justifyContent:"space-between",
-    alignItems:"center",
+  burst: { position: "absolute", width: BURST_SIZE, height: BURST_SIZE, pointerEvents: "none" },
+  burstIcon: {
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 12,
   },
 
-
-
-  flags:{
-    flexDirection:"row",
-    flexWrap:"wrap",
-    marginBottom:10,
+  caption: {
+    position: "absolute",
+    left: 0,
+    right: RAIL_WIDTH + 8,
+    bottom: 0,
+    paddingLeft: 16,
+    pointerEvents: "box-none",
   },
+  title: { color: "#FFFFFF", fontSize: 26, lineHeight: 31, fontWeight: "900", ...textShadow },
 
-
-
-  flag:{
-    flexDirection:"row",
-    alignItems:"center",
-    paddingHorizontal:10,
-    paddingVertical:5,
-    borderRadius:20,
-    marginRight:8,
-    marginBottom:6,
+  flags: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
+  flag: {
+    flexDirection: "row",
+    alignItems: "center",
+    maxWidth: "100%",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 6,
   },
+  flagText: { color: "#fff", fontSize: 12, fontWeight: "800", marginLeft: 5, flexShrink: 1 },
 
-
-
-  flagText:{
-    color:"#fff",
-    fontSize:12,
-    fontWeight:"800",
-    marginLeft:5,
+  ingredients: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
+  ingChip: {
+    maxWidth: "100%",
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 6,
+    marginBottom: 6,
   },
-
-
-
-  diets:{
-    flexDirection:"row",
-    flexWrap:"wrap",
-    marginTop:10,
+  ingHave: { backgroundColor: "rgba(24,166,75,0.92)" },
+  ingMissing: { backgroundColor: "rgba(229,57,53,0.92)" },
+  ingMore: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
   },
+  ingText: { color: "#fff", fontSize: 12, fontWeight: "700" },
 
-
-
-  dietChip:{
-    backgroundColor:"rgba(255,255,255,0.2)",
-    borderWidth:1,
-    borderColor:"rgba(255,255,255,0.45)",
-    paddingHorizontal:10,
-    paddingVertical:4,
-    borderRadius:20,
-    marginRight:6,
-    marginBottom:4,
+  button: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    height: 48,
+    marginTop: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 26,
   },
+  buttonText: { color: Palette.ink, fontSize: 16, fontWeight: "900" },
 
-
-
-  dietText:{
-    color:"#fff",
-    fontSize:12,
-    fontWeight:"700",
+  // ── Rail de droite ──
+  rail: { position: "absolute", right: 4, width: RAIL_WIDTH, alignItems: "center", gap: 18 },
+  railItem: { width: RAIL_WIDTH, alignItems: "center" },
+  railIcon: textShadow,
+  railLabel: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 3,
+    textAlign: "center",
+    ...textShadow,
   },
-
-
-
-  empty:{
-    flex:1,
-    alignItems:"center",
-    justifyContent:"center",
-    paddingHorizontal:32,
+  badge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.9)",
   },
+  badgeText: { color: "#FFFFFF", fontSize: 13, fontWeight: "900" },
 
-
-
-  emptyTitle:{
-    fontSize:24,
-    fontWeight:"800",
-    color:"#1C1C1A",
-    marginTop:18,
-    textAlign:"center",
+  // ── Invite à glisser ──
+  hint: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "36%",
+    alignItems: "center",
+    pointerEvents: "none",
   },
+  hintText: { color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginTop: 2, ...textShadow },
 
-
-
-  emptyText:{
-    fontSize:15,
-    color:"#8E8E86",
-    marginTop:8,
-    textAlign:"center",
-    lineHeight:21,
+  // ── Fil vide ──
+  empty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
   },
-
-
-
-  emptyButton:{
-    marginTop:24,
-    backgroundColor:"#111",
-    paddingVertical:14,
-    paddingHorizontal:26,
-    borderRadius:30,
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#1C1C1A",
+    marginTop: 18,
+    textAlign: "center",
   },
-
-
-
-  emptyButtonText:{
-    color:"#fff",
-    fontSize:16,
-    fontWeight:"700",
+  emptyText: {
+    fontSize: 15,
+    color: "#8E8E86",
+    marginTop: 8,
+    textAlign: "center",
+    lineHeight: 21,
   },
-
-
-
-  emptyLink:{
-    marginTop:16,
-    color:"#3E9C5C",
-    fontSize:15,
-    fontWeight:"700",
+  emptyButton: {
+    marginTop: 24,
+    backgroundColor: "#111",
+    paddingVertical: 14,
+    paddingHorizontal: 26,
+    borderRadius: 30,
   },
-
-
-
-  card:{
-    width,
-    height,
-  },
-
-
-
-  image:{
-    width,
-    height,
-    position:"absolute",
-  },
-
-
-
-  overlay:{
-    position:"absolute",
-    width,
-    height,
-    backgroundColor:
-      "rgba(0,0,0,0.4)",
-  },
-
-
-
-  content:{
-    position:"absolute",
-    bottom:90,
-    padding:20,
-    width,
-  },
-
-
-
-  title:{
-    fontSize:38,
-    fontWeight:"900",
-    color:"#fff",
-  },
-
-
-
-  row:{
-    flexDirection:"row",
-    alignItems:"center",
-    marginTop:12,
-  },
-
-
-
-  text:{
-    color:"#fff",
-    marginLeft:6,
-    marginRight:12,
-    fontSize:16,
-  },
-
-
-
-  badge:{
-    paddingHorizontal:14,
-    paddingVertical:5,
-    borderRadius:20,
-  },
-
-
-
-  badgeText:{
-    color:"#fff",
-    fontWeight:"800",
-  },
-
-
-
-  ingredients:{
-    flexDirection:"row",
-    flexWrap:"wrap",
-    marginTop:15,
-  },
-
-
-
-  ingChip:{
-    paddingHorizontal:12,
-    paddingVertical:7,
-    borderRadius:20,
-    marginRight:8,
-    marginBottom:8,
-  },
-
-
-
-  ingText:{
-    color:"#fff",
-    fontSize:12,
-    fontWeight:"700",
-  },
-
-
-
-  button:{
-    marginTop:20,
-    backgroundColor:"#fff",
-    paddingVertical:14,
-    borderRadius:30,
-    alignItems:"center",
-  },
-
-
-
-  buttonText:{
-    fontSize:16,
-    fontWeight:"900",
-  },
-
-
+  emptyButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  emptyLink: { marginTop: 16, color: "#3E9C5C", fontSize: 15, fontWeight: "700" },
 });

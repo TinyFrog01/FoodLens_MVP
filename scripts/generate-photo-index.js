@@ -29,7 +29,10 @@ ${entries}
 
 const placeholder = require("./placeholder.jpeg");
 
-export const getRecipePhoto = (id: string) => photos[id] ?? placeholder;
+// The recipe's own photo when it is a web address (Ricardo's recipes), otherwise
+// the photo of that id in this folder, otherwise the placeholder.
+export const getRecipePhoto = (id: string, image?: string) =>
+  image?.startsWith("http") ? { uri: image } : photos[id] ?? placeholder;
 `;
 
 fs.writeFileSync(OUTPUT_FILE, content);

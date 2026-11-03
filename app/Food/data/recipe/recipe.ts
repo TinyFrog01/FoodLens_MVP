@@ -25,9 +25,12 @@ export interface Recipe {
   }[];
 
   instructions: string[];
+  // Page d'origine des recettes générées (Wikibooks en anglais, Ricardo en français).
+  sourceUrl?: string;
 }
 
-export const recipes: Recipe[] = [
+// Recettes traduites et adaptées à la main (sources dans license.ts).
+const curatedRecipes: Recipe[] = [
 
 {
   id: "une-tasse-de-the",
@@ -3652,6 +3655,1314 @@ export const recipes: Recipe[] = [
     "Pour une cuisson au four, placer la viande sur des grilles recouvertes de papier aluminium et sécher à 65 °C. Retourner la viande après 3 à 4 heures, puis réduire la température à 55 °C et poursuivre le séchage.",
     "Le bœuf séché est prêt lorsqu’il peut se plier sans se casser."
   ]
+},
+{
+  id: "chaussons-au-boeuf",
+  title: "Chaussons au bœuf (pasties)",
+  image: "",
+  time: "1 h",
+  course: "main",
+  vegan: false,
+  diets: ["pork-free"],
+  allergens: ["gluten", "milk"],
+  appliances: ["oven"],
+  servings: 4,
+  ingredients: [
+    { name: "rôti de bœuf cuit", quantity: 400, unit: "g" },
+    { name: "pommes de terre cuites", quantity: 225, unit: "g" },
+    { name: "bouillon de bœuf", quantity: 240, unit: "ml" },
+    { name: "oignon", quantity: 1, unit: "" },
+    { name: "persil", quantity: 15, unit: "ml" },
+    { name: "thym séché", quantity: 1, unit: "ml" },
+    { name: "sel", quantity: 3, unit: "g" },
+    { name: "poivre", quantity: 0.5, unit: "g" },
+    { name: "pâte brisée", quantity: 2, unit: "abaisses" }, /* pour tarte double de 22 cm */
+    { name: "crème 10 %", quantity: 30, unit: "ml" }
+  ],
+  instructions: [
+    "Préchauffer le four à 230 °C.",
+    "Mélanger le bœuf et les pommes de terre coupés en petits dés, le bouillon, l'oignon cuit en dés, le persil, le thym, le sel et le poivre. Réserver.",
+    "Sur une surface légèrement farinée, abaisser le quart de la pâte en un cercle de 20 cm.",
+    "Déposer environ 250 ml de garniture sur une moitié du cercle.",
+    "Humecter le bord de la pâte avec un peu d'eau.",
+    "Replier la pâte sur la garniture et sceller les bords en les pressant avec une fourchette.",
+    "Déposer sur une plaque de cuisson non graissée.",
+    "Répéter avec le reste de la pâte et de la garniture.",
+    "Faire quelques entailles sur le dessus de chaque chausson.",
+    "Badigeonner le dessus de crème.",
+    "Cuire de 20 à 25 minutes, jusqu'à ce que les chaussons soient bien dorés."
+  ]
+},
+{
+  id: "ragout-de-boeuf",
+  title: "Ragoût de bœuf",
+  image: "",
+  time: "1 h 30 min",
+  course: "main",
+  vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["gluten"],
+  appliances: ["stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "farine", quantity: 60, unit: "g" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre", quantity: 0, unit: "" },
+    { name: "ail en poudre", quantity: 0, unit: "" },
+    { name: "huile d'olive", quantity: 50, unit: "ml" },
+    { name: "oignon", quantity: 1, unit: "" },
+    { name: "bœuf à ragoût", quantity: 500, unit: "g" },
+    { name: "bouillon de bœuf", quantity: 1, unit: "L" },
+    { name: "pommes de terre", quantity: 225, unit: "g" },
+    { name: "carottes surgelées", quantity: 110, unit: "g" },
+    { name: "champignons surgelés", quantity: 110, unit: "g" },
+    { name: "tomates en dés", quantity: 400, unit: "g" },
+    { name: "marjolaine séchée", quantity: 0, unit: "" },
+    { name: "feuille de laurier", quantity: 2, unit: "" }
+  ],
+  instructions: [
+    "Dans un petit bol, mélanger la farine, le sel, le poivre et l'ail en poudre.",
+    "Faire chauffer une grande casserole sur la cuisinière, puis ajouter l'huile d'olive et l'oignon haché.",
+    "Enrober les cubes de bœuf du mélange de farine et les déposer dans la casserole, en réservant le reste de la farine. Faire dorer le bœuf sur toutes ses faces.",
+    "Verser le bouillon, puis ajouter le reste du mélange de farine, les pommes de terre en dés, les carottes, les champignons, les tomates, la marjolaine et le laurier.",
+    "Porter à ébullition, puis réduire le feu au minimum. Couvrir et laisser mijoter au moins 1 heure, jusqu'à ce que le bœuf et les pommes de terre soient tendres."
+  ]
+},
+{
+  id: "saute-de-boeuf",
+  title: "Sauté de bœuf",
+  image: "",
+  time: "25 min",
+  course: "main",
+  vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["soy", "gluten", "sesame", "peanuts"],
+  appliances: ["stovetop"],
+  servings: 2,
+  ingredients: [
+    { name: "entrecôte", quantity: 200, unit: "g" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre noir", quantity: 0, unit: "" },
+    { name: "sauce soja", quantity: 30, unit: "ml" },
+    { name: "piment oiseau", quantity: 1, unit: "" },
+    { name: "ail", quantity: 3, unit: "gousses" },
+    { name: "oignon", quantity: 0.5, unit: "" },
+    { name: "huile d'arachide", quantity: 15, unit: "ml" },
+    { name: "carotte", quantity: 0.5, unit: "" },
+    { name: "oignons verts", quantity: 2, unit: "" },
+    { name: "miel", quantity: 30, unit: "ml" },
+    { name: "vinaigre de riz", quantity: 15, unit: "ml" },
+    { name: "graines de sésame grillées", quantity: 10, unit: "g" }
+  ],
+  instructions: [
+    "Trancher finement l'entrecôte en biais, dans le sens contraire des fibres.",
+    "Huiler légèrement le fond d'un wok ou d'une grande poêle et le chauffer à feu moyen-vif. Ajouter l'oignon haché finement et l'ail émincé, puis cuire en remuant jusqu'à ce que l'ail soit doré. Retirer du wok et garder au chaud.",
+    "Saler et poivrer les tranches de bœuf. En faire sauter quelques-unes à la fois dans le wok chaud jusqu'à ce qu'elles soient bien dorées et ne soient plus rosées. Retirer et répéter avec le reste du bœuf.",
+    "Ajouter dans le wok le piment haché, la carotte en julienne, la sauce soja, le miel, le vinaigre et les oignons verts. Faire sauter jusqu'à ce que les légumes soient légèrement dorés sur les bords.",
+    "Remettre l'oignon, l'ail et le bœuf dans le wok. Mélanger jusqu'à ce que le tout soit bien chaud.",
+    "Parsemer de graines de sésame grillées et servir sur du riz ou des nouilles."
+  ]
+},
+{
+  id: "filets-de-boeuf-au-vin-rouge",
+  title: "Filets de bœuf au vin rouge",
+  image: "",
+  time: "30 min",
+  course: "main",
+  vegan: false,
+  diets: ["dairy-free", "pork-free", "low-carb"],
+  allergens: ["sulfites", "gluten"],
+  appliances: ["oven", "stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "poivre noir concassé", quantity: 5, unit: "g" },
+    { name: "sel", quantity: 3, unit: "g" },
+    { name: "ail", quantity: 2, unit: "gousses" },
+    { name: "filets de bœuf", quantity: 4, unit: "" }, /* 2,5 cm d'épaisseur */
+    { name: "enduit à cuisson", quantity: 0, unit: "" },
+    { name: "oignon", quantity: 1, unit: "" },
+    { name: "vin rouge sec", quantity: 160, unit: "ml" },
+    { name: "sauce pour steak", quantity: 30, unit: "ml" }
+  ],
+  instructions: [
+    "Dans un petit bol, mélanger le poivre, le sel et l'ail émincé. Frotter les deux côtés de chaque filet avec ce mélange.",
+    "Déposer les filets sur la lèchefrite du four vaporisée d'enduit à cuisson. Faire griller sous le gril du four 5 minutes de chaque côté, ou jusqu'à la cuisson désirée. Réserver au chaud.",
+    "Vaporiser une poêle antiadhésive moyenne d'enduit à cuisson et la chauffer à feu moyen-vif. Ajouter l'oignon tranché finement et séparé en rondelles, couvrir et cuire 5 minutes en remuant de temps en temps.",
+    "Retirer l'oignon de la poêle et le garder au chaud.",
+    "Verser le vin dans la poêle en grattant le fond pour détacher les sucs. Cuire à feu moyen-vif jusqu'à ce que le vin ait réduit à environ 80 ml, soit environ 1 minute, puis incorporer la sauce pour steak.",
+    "Napper les filets de sauce au vin et garnir d'oignon. Servir avec des frites."
+  ]
+},
+{
+  id: "pain-a-la-biere",
+  title: "Pain à la bière",
+  image: "",
+  time: "1 h 15 min",
+  course: "basic",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["gluten", "sulfites"],
+  appliances: ["oven"],
+  servings: 10,
+  ingredients: [
+    { name: "farine", quantity: 375, unit: "g" },
+    { name: "sel", quantity: 12, unit: "g" },
+    { name: "bière", quantity: 340, unit: "ml" },
+    { name: "levure chimique", quantity: 17, unit: "g" },
+    { name: "miel", quantity: 30, unit: "ml" },
+    { name: "huile végétale", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Préchauffer le four à 175 °C.",
+    "Huiler un moule à pain d'environ 23 x 13 cm.",
+    "Bien mélanger la farine, le sel et la levure chimique.",
+    "Mélanger la bière et le miel, puis les ajouter aux ingrédients secs. Remuer jusqu'à ce que le tout soit bien mélangé. Ajouter un peu de farine au besoin pour obtenir une bonne consistance.",
+    "Étaler la pâte dans le moule.",
+    "Cuire de 40 à 45 minutes, jusqu'à ce que le pain soit doré et qu'un cure-dent inséré au centre en ressorte propre.",
+    "Servir chaud."
+  ]
+},
+{
+  id: "chili-aux-poivrons",
+  title: "Chili aux poivrons",
+  image: "",
+  time: "1 h 20 min",
+  course: "main",
+  vegan: false,
+  diets: ["gluten-free", "dairy-free", "pork-free"],
+  allergens: [],
+  appliances: ["stovetop"],
+  servings: 12,
+  ingredients: [
+    { name: "bœuf haché", quantity: 1500, unit: "g" },
+    { name: "oignons", quantity: 6, unit: "" },
+    { name: "poivrons", quantity: 3, unit: "" },
+    { name: "poudre de chili", quantity: 0, unit: "" },
+    { name: "sel d'ail", quantity: 0, unit: "" },
+    { name: "haricots rouges en conserve", quantity: 540, unit: "ml" },
+    { name: "tomates broyées", quantity: 1600, unit: "ml" },
+    { name: "riz blanc cuit", quantity: 0, unit: "" }
+    /* facultatif
+    { name: "cheddar râpé", quantity: 0, unit: "" } */
+  ],
+  instructions: [
+    "Mettre le bœuf haché dans une grande marmite.",
+    "Faire revenir à feu moyen en défaisant la viande jusqu'à ce qu'elle soit brune. Égoutter le gras.",
+    "Ajouter les poivrons et les oignons hachés grossièrement.",
+    "Cuire jusqu'à ce que les oignons soient translucides. Égoutter le gras au besoin.",
+    "Ajouter les tomates broyées. Laisser mijoter 1 heure en remuant de temps en temps.",
+    "Ajouter les haricots rouges et laisser mijoter 10 minutes de plus.",
+    "Assaisonner de poudre de chili et de sel d'ail au goût.",
+    "Servir sur du riz blanc et garnir de cheddar râpé, si désiré."
+  ]
+},
+{
+  id: "beurre-blanc",
+  title: "Beurre blanc",
+  image: "",
+  time: "20 min",
+  course: "basic",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free", "low-carb"],
+  allergens: ["milk", "sulfites"],
+  appliances: ["stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "vin blanc sec", quantity: 250, unit: "ml" },
+    { name: "citron", quantity: 1, unit: "" },
+    { name: "échalotes", quantity: 2, unit: "" },
+    { name: "beurre non salé", quantity: 160, unit: "g" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre blanc", quantity: 0, unit: "" }
+    /* facultatif
+    { name: "crème 35 %", quantity: 15, unit: "ml" } */
+  ],
+  instructions: [
+    "Mettre le vin blanc, le jus du citron et les échalotes hachées finement dans une casserole non réactive (inox, céramique ou fonte émaillée).",
+    "Faire réduire jusqu'à ce qu'il ne reste qu'environ 30 ml de liquide; l'ébullition n'abîme pas la sauce. Les échalotes doivent rester humides : si la casserole est sèche, la sauce risque de ne pas tenir.",
+    "Baisser le feu à doux. Pour une sauce plus stable, ajouter la crème à cette étape (facultatif, mais non traditionnel).",
+    "Incorporer le beurre très froid, coupé en cubes, un ou deux cubes à la fois, en fouettant vigoureusement. La sauce ne doit pas dépasser 95 °C : fouetter en partie hors du feu. Continuer jusqu'à ce que tout le beurre soit incorporé.",
+    "Assaisonner de sel et de poivre blanc, puis servir immédiatement."
+  ]
+},
+{
+  id: "biscotti",
+  title: "Biscotti",
+  image: "",
+  time: "1 h 45 min",
+  course: "dessert",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs", "tree-nuts"],
+  appliances: ["oven"],
+  servings: 42,
+  ingredients: [
+    { name: "beurre", quantity: 113, unit: "g" },
+    { name: "sucre", quantity: 250, unit: "g" },
+    { name: "œufs", quantity: 3, unit: "" },
+    { name: "extrait de vanille", quantity: 5, unit: "ml" },
+    { name: "farine tout usage", quantity: 250, unit: "g" },
+    { name: "levure chimique", quantity: 10, unit: "g" },
+    { name: "sel", quantity: 2.5, unit: "g" },
+    { name: "amandes hachées", quantity: 70, unit: "g" },
+    { name: "lait", quantity: 10, unit: "ml" }
+  ],
+  instructions: [
+    "Préchauffer le four à 190 °C.",
+    "Dans un bol, battre le beurre ramolli en crème avec 200 g de sucre.",
+    "Ajouter les œufs un à la fois en battant bien après chaque ajout.",
+    "Incorporer la vanille.",
+    "Mélanger la farine, la levure chimique et le sel, puis les ajouter au mélange crémeux.",
+    "Incorporer les amandes.",
+    "Tapisser une plaque de cuisson de papier d'aluminium et graisser le papier.",
+    "Diviser la pâte en deux et façonner deux rectangles d'environ 30 x 8 cm sur le papier.",
+    "Badigeonner de lait et saupoudrer du reste du sucre.",
+    "Cuire de 15 à 20 minutes, jusqu'à ce que les rectangles soient dorés et fermes au toucher.",
+    "Sortir du four et baisser la température à 150 °C.",
+    "Glisser les rectangles sur une grille avec le papier et laisser refroidir 15 minutes.",
+    "Déposer sur une planche à découper et trancher en diagonale en tranches de 1 cm. Disposer les tranches à plat sur une plaque non graissée.",
+    "Cuire 10 minutes. Retourner les biscuits et cuire 10 minutes de plus. Éteindre le four et laisser refroidir les biscuits à l'intérieur, la porte entrouverte.",
+    "Conserver dans un contenant hermétique."
+  ]
+},
+{
+  id: "soupe-aux-haricots-noirs",
+  title: "Soupe aux haricots noirs",
+  image: "",
+  time: "2 h",
+  course: "main",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free"],
+  allergens: ["milk", "sulfites"],
+  appliances: ["stovetop"],
+  servings: 12,
+  ingredients: [
+    { name: "haricots noirs secs", quantity: 1100, unit: "g" },
+    { name: "feuille de laurier", quantity: 5, unit: "" },
+    { name: "poivron rouge", quantity: 1, unit: "" },
+    { name: "poivron vert", quantity: 1, unit: "" },
+    { name: "poudre de chili", quantity: 3, unit: "g" },
+    { name: "cumin moulu", quantity: 2, unit: "g" },
+    { name: "ail", quantity: 7, unit: "gousses" },
+    { name: "piment jalapeño", quantity: 1, unit: "" },
+    { name: "oignons", quantity: 1.5, unit: "" },
+    { name: "vinaigre de vin rouge", quantity: 15, unit: "ml" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre", quantity: 0, unit: "" },
+    { name: "coriandre fraîche", quantity: 125, unit: "ml" },
+    { name: "crème sure", quantity: 250, unit: "ml" }
+  ],
+  instructions: [
+    "Trier les haricots.",
+    "Les mettre dans une grande marmite et couvrir d'au moins 5 cm d'eau.",
+    "Laisser tremper toute une nuit, puis changer l'eau.",
+    "Porter les haricots à ébullition. Réduire le feu et laisser mijoter jusqu'à ce que les haricots commencent à ramollir, environ 30 minutes.",
+    "Ajouter les feuilles de laurier, les poivrons en dés, la poudre de chili, le cumin, l'ail émincé, le jalapeño haché finement, les oignons en dés et le vinaigre.",
+    "Saler et poivrer au goût.",
+    "Laisser mijoter de 30 minutes à 1 heure, jusqu'à ce que les haricots soient tendres.",
+    "Retirer les feuilles de laurier.",
+    "Incorporer la coriandre hachée.",
+    "Servir garni de crème sure."
+  ]
+},
+{
+  id: "gateau-foret-noire",
+  title: "Gâteau Forêt-Noire",
+  image: "",
+  time: "3 h",
+  course: "dessert",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs", "soy"],
+  appliances: ["oven"],
+  servings: 8,
+  ingredients: [
+    { name: "beurre", quantity: 150, unit: "g" },
+    { name: "cassonade", quantity: 225, unit: "g" },
+    { name: "chocolat noir", quantity: 200, unit: "g" },
+    { name: "farine tout usage", quantity: 300, unit: "g" },
+    { name: "levure chimique", quantity: 10, unit: "g" },
+    { name: "cannelle moulue", quantity: 0.5, unit: "g" },
+    { name: "crème sure", quantity: 140, unit: "ml" },
+    { name: "café noir froid", quantity: 45, unit: "ml" },
+    { name: "œufs", quantity: 2, unit: "" },
+    { name: "sel", quantity: 2, unit: "pincées" },
+    { name: "sucre glace", quantity: 50, unit: "g" },
+    { name: "jaune d'œuf", quantity: 1, unit: "" },
+    { name: "extrait de vanille", quantity: 2, unit: "ml" },
+    { name: "crème 35 %", quantity: 570, unit: "ml" },
+    { name: "cerises noires en conserve", quantity: 450, unit: "g" },
+    { name: "confiture de cerises noires", quantity: 60, unit: "ml" }
+  ],
+  instructions: [
+    "Préchauffer le four à 160 °C. Graisser et chemiser un moule à gâteau rond et profond de 23 cm.",
+    "Battre 100 g de beurre et la cassonade en crème.",
+    "Faire fondre 100 g de chocolat et l'incorporer au mélange en battant, puis incorporer les œufs.",
+    "Tamiser ensemble 200 g de farine, la levure chimique, une pincée de sel et la cannelle.",
+    "Incorporer délicatement les ingrédients secs au mélange, puis la crème sure et le café froid.",
+    "Verser dans le moule et cuire environ 1 h 25 min, jusqu'à ce qu'un cure-dent inséré au centre en ressorte propre. Laisser refroidir sur une grille.",
+    "Pour la base, mélanger 100 g de farine, une pincée de sel, le sucre glace, 50 g de beurre, le jaune d'œuf et la vanille jusqu'à ce que la pâte soit ferme.",
+    "Abaisser la pâte sur un plan de travail fariné en un disque de la taille du fond du moule.",
+    "Déposer sur une plaque et cuire de 20 à 25 minutes à 180 °C, jusqu'à ce que la base soit dorée.",
+    "Fouetter la crème jusqu'à ce qu'elle tienne sa forme. En mettre une partie dans une poche à douille cannelée pour la décoration.",
+    "Couper le gâteau horizontalement en 3 étages égaux.",
+    "Égoutter les cerises en réservant le jus. Garder 8 cerises entières pour la décoration et dénoyauter les autres.",
+    "Déposer la base sur le plat de service et la tartiner de confiture de cerises.",
+    "Imbiber les étages de gâteau du jus de cerise réservé (ou de kirsch).",
+    "Déposer un premier étage sur la base, puis le couvrir d'une couche de crème fouettée et de la moitié des cerises dénoyautées.",
+    "Ajouter le deuxième étage, une autre couche de crème et le reste des cerises.",
+    "Terminer avec le dernier étage de gâteau.",
+    "Couvrir tout le gâteau du reste de la crème et presser le reste du chocolat, râpé, sur le dessus et les côtés.",
+    "Décorer le dessus de rosettes de crème et des cerises entières réservées."
+  ]
+},
+{
+  id: "haricots-a-oeil-noir-et-chou-frise",
+  title: "Haricots à œil noir et chou frisé",
+  image: "",
+  time: "30 min",
+  course: "side",
+  vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free"],
+  allergens: [],
+  appliances: ["stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "huile d'olive", quantity: 15, unit: "ml" },
+    { name: "ail", quantity: 2, unit: "gousses" },
+    { name: "oignon", quantity: 1, unit: "" },
+    { name: "tomates en dés", quantity: 400, unit: "ml" },
+    { name: "haricots à œil noir en conserve", quantity: 400, unit: "ml" },
+    { name: "piment de cayenne", quantity: 0.5, unit: "g" },
+    { name: "feuille de laurier", quantity: 1, unit: "" },
+    { name: "chou frisé surgelé", quantity: 280, unit: "g" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Faire revenir l'oignon et l'ail hachés dans l'huile à feu moyen pendant quelques minutes.",
+    "Ajouter les tomates avec leur jus, les haricots égouttés, le piment de cayenne et la feuille de laurier. Couvrir et laisser mijoter 15 minutes.",
+    "Ajouter le chou frisé décongelé et laisser mijoter à découvert de 5 à 10 minutes, jusqu'à ce qu'il soit tendre mais encore vert.",
+    "Saler et poivrer au goût."
+  ]
+},
+{
+  id: "spaghetti-au-poulet-et-au-poivre-noir",
+  title: "Spaghetti au poulet et au poivre noir",
+  image: "",
+  time: "1 h",
+  course: "main",
+  vegan: false,
+  diets: ["pork-free"],
+  allergens: ["gluten", "milk"],
+  appliances: ["stovetop"],
+  servings: 5,
+  ingredients: [
+    { name: "spaghetti", quantity: 800, unit: "g" },
+    { name: "eau", quantity: 0, unit: "" },
+    { name: "huile végétale", quantity: 75, unit: "ml" },
+    { name: "ail", quantity: 6, unit: "gousses" },
+    { name: "poivron vert", quantity: 1, unit: "" },
+    { name: "poivron rouge", quantity: 1, unit: "" },
+    { name: "oignon", quantity: 1, unit: "" },
+    { name: "crème 35 %", quantity: 100, unit: "ml" },
+    { name: "filets de poulet", quantity: 6, unit: "" },
+    { name: "poivre noir", quantity: 25, unit: "g" },
+    { name: "sel", quantity: 30, unit: "g" },
+    { name: "persil", quantity: 30, unit: "ml" }
+  ],
+  instructions: [
+    "Porter une grande casserole d'eau à ébullition. Ajouter les spaghetti et 30 ml d'huile. Cuire 10 minutes, puis égoutter en réservant un peu d'eau de cuisson.",
+    "Couper le poulet en morceaux de 2 cm et le faire bouillir dans de l'eau salée jusqu'à ce qu'il change de couleur. Égoutter.",
+    "Couper chaque poivron en 8 morceaux et hacher l'oignon et l'ail. Chauffer le reste de l'huile dans une poêle antiadhésive et y faire revenir l'ail, les poivrons et l'oignon.",
+    "Ajouter le poulet égoutté, la crème, le poivre noir, le reste du sel et le persil. Remuer jusqu'à ce que le tout soit bien mélangé.",
+    "Ajouter les spaghetti et mélanger jusqu'à ce qu'ils soient bien enrobés, en ajoutant un peu d'eau de cuisson au besoin.",
+    "Servir chaud."
+  ]
+},
+{
+  id: "sandwich-blt",
+  title: "Sandwich BLT (bacon, laitue, tomate)",
+  image: "",
+  time: "15 min",
+  course: "main",
+  vegan: false,
+  diets: [],
+  allergens: ["gluten", "eggs", "mustard"],
+  appliances: ["stovetop"],
+  servings: 1,
+  ingredients: [
+    { name: "bacon", quantity: 3, unit: "tranches" },
+    { name: "laitue", quantity: 2, unit: "feuilles" },
+    { name: "tomate", quantity: 1, unit: "" },
+    { name: "pain", quantity: 2, unit: "tranches" },
+    { name: "mayonnaise", quantity: 15, unit: "ml" },
+    { name: "poivre noir", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Faire griller les 2 tranches de pain.",
+    "Pendant ce temps, faire cuire le bacon à la poêle ou sous le gril jusqu'à ce qu'il soit croustillant, sans le laisser brûler.",
+    "Tartiner les rôties de mayonnaise.",
+    "Garnir une rôtie de laitue, de tomate tranchée finement et de bacon. Poivrer au goût, puis couvrir de l'autre rôtie.",
+    "Couper en triangles ou en deux et servir immédiatement."
+  ]
+},
+{
+  id: "muffins-aux-bleuets",
+  title: "Muffins aux bleuets",
+  image: "",
+  time: "45 min",
+  course: "dessert",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "eggs", "milk"],
+  appliances: ["oven"],
+  servings: 12,
+  ingredients: [
+    { name: "farine tout usage", quantity: 250, unit: "g" },
+    { name: "sucre", quantity: 65, unit: "g" },
+    { name: "levure chimique", quantity: 8, unit: "g" },
+    { name: "sel", quantity: 1.5, unit: "g" },
+    { name: "œuf", quantity: 1, unit: "" },
+    { name: "lait", quantity: 180, unit: "ml" },
+    { name: "huile végétale", quantity: 60, unit: "ml" },
+    { name: "bleuets", quantity: 110, unit: "g" }
+  ],
+  instructions: [
+    "Graisser les moules à muffins ou les tapisser de moules en papier. Réserver.",
+    "Préchauffer le four à 200 °C.",
+    "Dans un bol moyen, mélanger la farine, le sucre, la levure chimique et le sel. Former un puits au centre et réserver.",
+    "Dans un petit bol, mélanger l'œuf battu, le lait et l'huile. Verser d'un coup dans le mélange de farine, ajouter les bleuets frais ou surgelés et remuer juste assez pour humecter. La pâte doit rester grumeleuse.",
+    "Remplir les moules aux deux tiers.",
+    "Cuire de 18 à 20 minutes, jusqu'à ce que les muffins soient dorés et qu'un cure-dent inséré au centre en ressorte propre.",
+    "Démouler et laisser refroidir 5 minutes sur une grille."
+  ]
+},
+{
+  id: "pancakes-aux-bleuets",
+  title: "Pancakes aux bleuets",
+  image: "",
+  time: "30 min",
+  course: "breakfast",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs"],
+  appliances: ["stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "farine tout usage", quantity: 220, unit: "g" },
+    { name: "sucre", quantity: 25, unit: "g" },
+    { name: "bicarbonate de soude", quantity: 10, unit: "g" },
+    { name: "crème de tartre", quantity: 4.5, unit: "g" },
+    { name: "sel", quantity: 3, unit: "g" },
+    { name: "cannelle moulue", quantity: 2.5, unit: "g" },
+    { name: "muscade moulue", quantity: 2, unit: "g" },
+    { name: "extrait de vanille", quantity: 5, unit: "ml" },
+    { name: "babeurre", quantity: 480, unit: "ml" },
+    { name: "œufs", quantity: 4, unit: "" },
+    { name: "bleuets surgelés", quantity: 150, unit: "g" },
+    { name: "huile végétale", quantity: 0, unit: "" }
+    /* facultatif
+    { name: "beurre fondu", quantity: 60, unit: "g" } */
+  ],
+  instructions: [
+    "Tamiser ensemble la farine, le sucre, le bicarbonate de soude, la crème de tartre, le sel, la cannelle et la muscade. Réserver.",
+    "Séparer les œufs. Dans un grand bol, fouetter le babeurre, la vanille et les jaunes d'œufs (et le beurre fondu, si désiré). Incorporer le mélange de farine, puis les bleuets.",
+    "Dans un petit bol, fouetter les blancs d'œufs en neige ferme, sans qu'ils deviennent secs. Les incorporer délicatement à la pâte.",
+    "Chauffer une grande poêle à feu moyen et la huiler légèrement. Verser environ 60 ml de pâte par pancake et cuire jusqu'à ce que le dessus soit pris et couvert de bulles. Retourner et cuire 1 minute de plus.",
+    "Servir chaud avec la garniture de votre choix."
+  ]
+},
+{
+  id: "boeuf-bourguignon",
+  title: "Bœuf bourguignon",
+  image: "",
+  time: "3 h",
+  course: "main",
+  vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["gluten", "sulfites"],
+  appliances: ["stovetop"],
+  servings: 6,
+  ingredients: [
+    { name: "bœuf à braiser", quantity: 1000, unit: "g" }, /* palette ou épaule */
+    { name: "oignons", quantity: 3, unit: "" },
+    { name: "ail", quantity: 2, unit: "gousses" },
+    { name: "carottes", quantity: 300, unit: "g" },
+    { name: "champignons de Paris", quantity: 300, unit: "g" },
+    { name: "bouquet garni", quantity: 1, unit: "" }, /* basilic, romarin et thym */
+    { name: "vin rouge", quantity: 750, unit: "ml" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre", quantity: 0, unit: "" },
+    { name: "huile d'olive", quantity: 30, unit: "ml" },
+    { name: "farine", quantity: 16, unit: "g" },
+    { name: "eau", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Couper le bœuf en gros cubes de 5 cm. Assaisonner de sel, de poivre et d'huile d'olive.",
+    "Dans une cocotte ou une grande casserole, faire dorer le bœuf par petites quantités. Retirer chaque portion une fois dorée et réserver.",
+    "Dans la même cocotte, faire revenir les oignons hachés et l'ail jusqu'à ce qu'ils soient dorés.",
+    "Saupoudrer de farine et cuire quelques minutes de plus.",
+    "Ajouter de 250 à 500 ml de vin rouge. Porter à ébullition, puis laisser mijoter 5 minutes.",
+    "Ajouter le bœuf, les carottes hachées, le bouquet garni et les champignons.",
+    "Ajouter le reste du vin et assez d'eau pour couvrir la viande et les légumes.",
+    "Cuire à feu doux de 2 à 3 heures en remuant de temps en temps. Écumer au besoin."
+  ]
+},
+{
+  id: "sauce-bolognaise",
+  title: "Sauce bolognaise",
+  image: "",
+  time: "1 h 45 min",
+  course: "main",
+  vegan: false,
+  diets: ["gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: ["eggs"],
+  appliances: ["stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "bœuf haché maigre", quantity: 675, unit: "g" },
+    { name: "blancs d'œufs", quantity: 2, unit: "" },
+    { name: "tomates en conserve", quantity: 796, unit: "ml" }, /* San Marzano ou Roma */
+    { name: "concentré de tomate", quantity: 156, unit: "ml" },
+    { name: "ail", quantity: 6, unit: "gousses" },
+    { name: "huile d'olive", quantity: 30, unit: "ml" },
+    { name: "feuille de laurier", quantity: 1, unit: "" },
+    { name: "origan séché", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Mettre une casserole à fond épais sur feu moyen-doux avec l'huile et les gousses d'ail pelées entières.",
+    "Pendant que la casserole chauffe, mélanger le bœuf et les blancs d'œufs, tous deux à température ambiante, jusqu'à obtenir une pâte homogène.",
+    "Remuer l'ail dans l'huile jusqu'à ce qu'il devienne parfumé.",
+    "Ajouter la viande en remuant pour la défaire en petits morceaux. Cuire jusqu'à ce que la majeure partie du jus se soit évaporée.",
+    "Ajouter le concentré de tomate et mélanger, puis ajouter les tomates, la feuille de laurier et l'origan.",
+    "Couvrir en laissant une ouverture et laisser mijoter à feu doux pendant 1 heure en remuant toutes les 15 minutes.",
+    "Éteindre le feu et retirer les gousses d'ail : les jeter, ou les écraser et les remettre dans la sauce.",
+    "Assaisonner au goût en tenant compte du sel déjà présent dans les produits de tomate.",
+    "Couvrir complètement et laisser reposer 30 minutes. Servir sur des pâtes, comme des spaghetti ou des rigatoni."
+  ]
+},
+{
+  id: "bortsch",
+  title: "Bortsch",
+  image: "",
+  time: "1 h 15 min",
+  course: "main",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free"],
+  allergens: ["milk"],
+  appliances: ["stovetop"],
+  servings: 6,
+  ingredients: [
+    { name: "pommes de terre", quantity: 3, unit: "" },
+    { name: "betteraves", quantity: 150, unit: "g" },
+    { name: "eau", quantity: 1, unit: "L" },
+    { name: "beurre", quantity: 30, unit: "g" },
+    { name: "oignon", quantity: 1, unit: "" },
+    { name: "sel", quantity: 9, unit: "g" },
+    { name: "céleri", quantity: 1, unit: "branche" },
+    { name: "carotte", quantity: 1, unit: "" },
+    { name: "chou", quantity: 300, unit: "g" },
+    { name: "poivre noir", quantity: 0, unit: "" },
+    { name: "aneth séché", quantity: 5, unit: "ml" },
+    { name: "vinaigre de cidre", quantity: 30, unit: "ml" },
+    { name: "cassonade", quantity: 15, unit: "g" },
+    { name: "purée de tomate", quantity: 250, unit: "ml" },
+    { name: "crème sure", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Mettre les pommes de terre et les betteraves tranchées finement dans une casserole moyenne avec l'eau. Couvrir et cuire à feu moyen de 20 à 30 minutes, jusqu'à ce qu'elles soient tendres. Poursuivre la recette pendant la cuisson.",
+    "Faire fondre le beurre dans une marmite. Ajouter l'oignon haché et le sel. Cuire à feu moyen de 8 à 10 minutes en remuant de temps en temps, jusqu'à ce que l'oignon soit translucide.",
+    "Ajouter le céleri et la carotte hachés, le chou râpé et 500 ml de l'eau de cuisson des pommes de terre et des betteraves. Couvrir et cuire à feu moyen de 8 à 10 minutes, jusqu'à ce que les légumes soient tendres.",
+    "Ajouter le poivre, l'aneth, le vinaigre, la cassonade et la purée de tomate, puis les pommes de terre, les betteraves et le reste de leur eau de cuisson. Couvrir et laisser mijoter au moins 15 minutes. Rectifier l'assaisonnement. Si la soupe est trop liquide, la laisser mijoter à découvert et ajouter un peu de concentré de tomate.",
+    "Servir chaud, garni de crème sure ou de yogourt et parsemé d'aneth."
+  ]
+},
+{
+  id: "feves-au-lard-a-la-bostonnaise",
+  title: "Fèves au lard à la bostonnaise",
+  image: "",
+  time: "2 h",
+  course: "side",
+  vegan: false,
+  diets: ["gluten-free", "dairy-free"],
+  allergens: ["mustard", "sulfites"],
+  appliances: ["stovetop", "oven"],
+  servings: 6,
+  ingredients: [
+    { name: "bacon épais", quantity: 6, unit: "tranches" }, /* ou 5 gouttes de fumée liquide */
+    { name: "haricots rouges en conserve", quantity: 700, unit: "g" },
+    { name: "mélasse", quantity: 125, unit: "ml" },
+    { name: "mélasse noire", quantity: 60, unit: "ml" },
+    { name: "cassonade foncée", quantity: 55, unit: "g" },
+    { name: "rhum brun", quantity: 30, unit: "ml" },
+    { name: "sel", quantity: 3, unit: "g" },
+    { name: "poivre noir", quantity: 1, unit: "g" },
+    { name: "moutarde sèche", quantity: 7, unit: "g" }
+  ],
+  instructions: [
+    "Préchauffer le four à 160 °C.",
+    "Faire cuire le bacon. Séparer la viande du gras, puis hacher le bacon.",
+    "Mettre 15 ml du gras de bacon dans une grande poêle en inox allant au four. Ajouter les haricots rincés et égouttés et les faire sauter à feu moyen-vif.",
+    "Ajouter le rhum et incliner la poêle pour le flamber. Sur une cuisinière électrique, l'allumer avec un long briquet.",
+    "Ajouter le reste des ingrédients et le bacon haché, puis mélanger délicatement.",
+    "Cuire au four 1 h 30 en ajoutant un peu de mélasse noire de temps en temps pour éviter que les haricots ne s'assèchent."
+  ]
+},
+{
+  id: "bouchees-a-la-reine",
+  title: "Bouchées à la reine",
+  image: "",
+  time: "45 min",
+  course: "main",
+  vegan: false,
+  diets: ["pork-free"],
+  allergens: ["gluten", "milk", "eggs"],
+  appliances: ["stovetop", "oven"],
+  servings: 4,
+  ingredients: [
+    { name: "vol-au-vent", quantity: 4, unit: "" },
+    { name: "échalote", quantity: 1, unit: "" },
+    { name: "poitrines de poulet", quantity: 2, unit: "" }, /* ou de dinde */
+    { name: "champignons de Paris", quantity: 115, unit: "g" },
+    { name: "beurre", quantity: 60, unit: "g" },
+    { name: "farine", quantity: 16, unit: "g" },
+    { name: "jaune d'œuf", quantity: 1, unit: "" },
+    { name: "crème fraîche", quantity: 250, unit: "ml" }, /* ou crème 35 % */
+    { name: "bouquet garni", quantity: 1, unit: "" },
+    { name: "bouillon de poulet", quantity: 350, unit: "ml" },
+    { name: "poivre", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Mettre le bouillon de poulet et le bouquet garni dans une casserole. Porter à ébullition et laisser infuser 10 minutes.",
+    "Couper les poitrines de poulet en petits dés.",
+    "Laver rapidement les champignons et les couper en deux ou en quatre selon leur taille.",
+    "Dans une sauteuse, faire fondre le beurre à feu moyen-vif et ajouter l'échalote hachée. Cuire environ 1 minute en remuant.",
+    "Ajouter la farine et cuire 1 petite minute en mélangeant au fouet ou à la cuillère de bois, sans laisser colorer.",
+    "Retirer le bouquet garni et ajouter le bouillon peu à peu. Cuire 2 minutes en remuant.",
+    "Ajouter le poulet et les champignons et cuire de 5 à 6 minutes en remuant de temps en temps.",
+    "Préchauffer le four à 180 °C et réchauffer les vol-au-vent de 5 à 10 minutes, ou selon les indications du fabricant, sans les laisser brûler.",
+    "Dans un bol, mélanger la crème et le jaune d'œuf. Augmenter le feu sous la sauteuse, ajouter ce mélange en fouettant et baisser le feu dès que la sauce atteint l'ébullition. La sauce doit être onctueuse et napper la cuillère. Ne pas saler, seulement poivrer.",
+    "Sortir les vol-au-vent du four, les garnir rapidement et servir aussitôt, car ils refroidissent vite."
+  ]
+},
+{
+  id: "boxty",
+  title: "Boxty (galettes de pommes de terre irlandaises)",
+  image: "",
+  time: "1 h",
+  course: "side",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk"],
+  appliances: ["stovetop"],
+  servings: 20,
+  ingredients: [
+    { name: "pommes de terre", quantity: 900, unit: "g" },
+    { name: "lait", quantity: 250, unit: "ml" },
+    { name: "beurre", quantity: 45, unit: "g" },
+    { name: "farine tout usage", quantity: 190, unit: "g" },
+    { name: "bicarbonate de soude", quantity: 5, unit: "g" },
+    { name: "babeurre", quantity: 250, unit: "ml" },
+    { name: "poivre noir", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Laver, peler et couper en morceaux la moitié des pommes de terre, puis les faire bouillir.",
+    "Réduire les pommes de terre bouillies en purée avec le lait et 15 g de beurre. Réserver.",
+    "Râper l'autre moitié des pommes de terre, crues, au-dessus d'un linge solide.",
+    "Tordre le linge pour retirer le plus de liquide possible des pommes de terre râpées.",
+    "Mélanger les pommes de terre râpées, la purée, le bicarbonate de soude, le babeurre, la farine et du poivre au goût.",
+    "Bien remuer pour combiner.",
+    "Chauffer une plaque ou une poêle antiadhésive à feu moyen et y faire fondre un peu du reste du beurre.",
+    "Verser la préparation dans la poêle, 60 ml à la fois.",
+    "Cuire jusqu'à ce que les bords soient pris et que la galette fasse des bulles.",
+    "Retourner et cuire l'autre côté.",
+    "Servir chaud."
+  ]
+},
+{
+  id: "bouts-de-cotes-de-boeuf-braises",
+  title: "Bouts de côtes de bœuf braisés",
+  image: "",
+  time: "3 h 30 min",
+  course: "main",
+  vegan: false,
+  diets: ["gluten-free", "dairy-free", "pork-free", "low-carb"],
+  allergens: ["sulfites"],
+  appliances: ["stovetop", "oven"],
+  servings: 4,
+  ingredients: [
+    { name: "bouts de côtes de bœuf", quantity: 8, unit: "" }, /* avec os, environ 1,7 kg */
+    { name: "huile d'olive", quantity: 30, unit: "ml" },
+    { name: "oignon", quantity: 1, unit: "" },
+    { name: "céleri", quantity: 4, unit: "branches" },
+    { name: "carottes", quantity: 4, unit: "" },
+    { name: "ail", quantity: 3, unit: "gousses" },
+    { name: "thym frais", quantity: 4, unit: "brins" },
+    { name: "concentré de tomate", quantity: 156, unit: "ml" },
+    { name: "vin rouge sec", quantity: 750, unit: "ml" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Préchauffer le four à 180 °C.",
+    "Retirer les gros dépôts de gras sur les côtés des côtes, puis saler et poivrer toutes les faces.",
+    "Chauffer l'huile d'olive dans une cocotte à feu moyen-vif.",
+    "Faire dorer les côtes sur toutes les faces, de 2 à 3 minutes par côté, en plusieurs fois pour ne pas surcharger la cocotte.",
+    "Pendant ce temps, délayer le concentré de tomate dans environ le tiers du vin.",
+    "Retirer la viande et réserver.",
+    "Faire revenir l'oignon émincé, le céleri, les carottes et l'ail tranchés de 5 à 10 minutes, jusqu'à ce qu'ils soient tendres.",
+    "Déglacer avec un peu de vin en grattant les sucs au fond de la cocotte.",
+    "Ajouter le mélange de concentré de tomate, puis saler et poivrer au goût.",
+    "Remettre les côtes dans la cocotte en les nichant dans les légumes, puis ajouter les brins de thym.",
+    "Ajouter le reste du vin jusqu'à couvrir presque entièrement les côtes.",
+    "Couvrir et braiser au four de 2 h 30 à 3 heures en retournant les côtes une fois, jusqu'à ce que la viande soit très tendre et se détache de l'os.",
+    "Servir les côtes avec le liquide de braisage et les légumes, sur une purée de pommes de terre, avec des pommes de terre nouvelles ou sur des nouilles aux œufs."
+  ]
+},
+{
+  id: "muffins-au-son",
+  title: "Muffins au son",
+  image: "",
+  time: "25 min",
+  course: "breakfast",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs"],
+  appliances: ["oven"],
+  servings: 12,
+  ingredients: [
+    { name: "son de blé", quantity: 60, unit: "g" },
+    { name: "babeurre", quantity: 180, unit: "ml" },
+    { name: "œuf", quantity: 1, unit: "" },
+    { name: "margarine", quantity: 30, unit: "g" },
+    { name: "farine tout usage", quantity: 125, unit: "g" },
+    { name: "levure chimique", quantity: 4, unit: "g" },
+    { name: "bicarbonate de soude", quantity: 3, unit: "g" },
+    { name: "sel", quantity: 3, unit: "g" },
+    { name: "cassonade", quantity: 100, unit: "g" }
+  ],
+  instructions: [
+    "Préchauffer le four à 200 °C.",
+    "Dans un bol, mélanger le son de blé et le babeurre.",
+    "Dans un autre bol, battre en crème l'œuf, la cassonade et la margarine, puis incorporer le mélange de son.",
+    "Dans un troisième bol, mélanger la farine, la levure chimique, le bicarbonate de soude et le sel. Ajouter à la préparation et remuer juste assez pour humecter.",
+    "Remplir les moules à muffins aux trois quarts.",
+    "Cuire de 15 à 20 minutes. Les muffins sont meilleurs encore tièdes."
+  ]
+},
+{
+  id: "pouding-au-pain",
+  title: "Pouding au pain",
+  image: "",
+  time: "1 h",
+  course: "dessert",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs"],
+  appliances: ["oven"],
+  servings: 12,
+  ingredients: [
+    { name: "pain", quantity: 6, unit: "tranches" },
+    { name: "beurre", quantity: 30, unit: "g" },
+    { name: "œufs", quantity: 4, unit: "" },
+    { name: "sucre", quantity: 150, unit: "g" },
+    { name: "lait", quantity: 475, unit: "ml" },
+    { name: "cannelle moulue", quantity: 2, unit: "g" },
+    { name: "extrait de vanille", quantity: 5, unit: "ml" }
+    /* facultatif
+    { name: "raisins secs", quantity: 80, unit: "g" } */
+  ],
+  instructions: [
+    "Préchauffer le four à 175 °C.",
+    "Déchirer le pain en petits morceaux, ou le couper en cubes, et le mettre dans un plat allant au four. Le pain peut être un peu rassis. Ajouter les raisins secs, si désiré, en remplissant le plat.",
+    "Verser le beurre fondu sur le pain.",
+    "Dans un bol, battre légèrement les œufs. Ajouter le sucre, le lait, la cannelle et la vanille, puis mélanger.",
+    "Verser ce mélange sur le pain. Presser légèrement le pain pour l'aider à absorber le liquide : tout le pain doit être imbibé.",
+    "Cuire au four 45 minutes.",
+    "Retirer du four et laisser refroidir.",
+    "Servir froid ou tiède, à la cuillère ou coupé en carrés."
+  ]
+},
+{
+  id: "pappa-al-pomodoro",
+  title: "Pappa al pomodoro (soupe de pain à la tomate)",
+  image: "",
+  time: "30 min",
+  course: "main",
+  vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["gluten"],
+  appliances: ["stovetop"],
+  servings: 2,
+  ingredients: [
+    { name: "pain rassis", quantity: 250, unit: "g" },
+    { name: "purée de tomate", quantity: 750, unit: "ml" },
+    { name: "ail", quantity: 2, unit: "gousses" },
+    { name: "huile d'olive", quantity: 30, unit: "ml" },
+    { name: "basilic frais", quantity: 1, unit: "poignée" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Tremper brièvement le pain dans l'eau, juste assez pour pouvoir l'écraser avec les mains. Il ne doit pas être détrempé.",
+    "Dans une grande poêle, faire revenir l'ail écrasé et haché finement dans l'huile jusqu'à ce qu'il commence à colorer.",
+    "Ajouter la purée de tomate et le sel, puis cuire à feu moyen jusqu'à ébullition.",
+    "Essorer le pain et l'ajouter en morceaux pas plus petits qu'une noix. Mélanger avec la tomate jusqu'à ce que le pain soit complètement rouge. La tomate doit encore sentir le frais.",
+    "Retirer du feu et servir chaud dans un bol, avec un filet d'huile d'olive, du poivre et une feuille de basilic."
+  ]
+},
+{
+  id: "burritos-du-dejeuner",
+  title: "Burritos du déjeuner",
+  image: "",
+  time: "30 min",
+  course: "breakfast",
+  vegan: false,
+  diets: [],
+  allergens: ["eggs", "gluten", "milk"],
+  appliances: ["stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "œufs", quantity: 8, unit: "" },
+    { name: "grandes tortillas de farine", quantity: 4, unit: "" },
+    { name: "bacon", quantity: 8, unit: "tranches" }, /* ou 400 g de saucisses à déjeuner */
+    { name: "pommes de terre rissolées", quantity: 400, unit: "g" },
+    { name: "fromage râpé", quantity: 100, unit: "g" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre", quantity: 0, unit: "" }
+    /* facultatif
+    { name: "sauce hollandaise", quantity: 0, unit: "" } */
+  ],
+  instructions: [
+    "Cuire les pommes de terre rissolées et le bacon. Préparer les œufs brouillés, au miroir ou pochés.",
+    "Déposer le quart des pommes de terre rissolées sur une tortilla.",
+    "Ajouter 2 tranches de bacon.",
+    "Ajouter 2 œufs, du fromage, du sel et du poivre, puis un peu de sauce hollandaise, si désiré.",
+    "Rouler la tortilla pour bien enfermer la garniture. Avec des œufs pochés ou au miroir, presser le burrito pour crever les jaunes et former une sauce.",
+    "Répéter avec le reste des ingrédients."
+  ]
+},
+{
+  id: "brigadeiros",
+  title: "Brigadeiros (bouchées brésiliennes au chocolat)",
+  image: "",
+  time: "45 min",
+  course: "dessert",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free"],
+  allergens: ["milk", "soy"],
+  appliances: ["stovetop"],
+  servings: 25,
+  ingredients: [
+    { name: "lait concentré sucré", quantity: 300, unit: "ml" },
+    { name: "beurre", quantity: 15, unit: "g" },
+    { name: "cacao en poudre", quantity: 15, unit: "g" },
+    { name: "vermicelles de chocolat", quantity: 100, unit: "g" }
+  ],
+  instructions: [
+    "Dans une casserole à fond épais, mélanger le lait concentré, le cacao et le beurre. Remuer pour dissoudre le cacao.",
+    "Cuire à feu doux en remuant constamment pour éviter la formation de grumeaux.",
+    "Continuer de remuer de 10 à 12 minutes, jusqu'à ce qu'on voie le fond de la casserole pendant une seconde en y passant la cuillère. Plus la cuisson est longue, plus les bouchées seront fermes.",
+    "Laisser refroidir.",
+    "Beurrer ses mains et façonner de petites boules d'environ 2 cm de diamètre, ou utiliser deux cuillères. Les rouler dans les vermicelles de chocolat."
+  ]
+},
+{
+  id: "burgers-au-brocoli",
+  title: "Burgers au brocoli",
+  image: "",
+  time: "40 min",
+  course: "main",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["eggs", "tree-nuts", "gluten", "mustard"],
+  appliances: ["oven"],
+  servings: 4,
+  ingredients: [
+    { name: "œufs", quantity: 2, unit: "" },
+    { name: "brocoli", quantity: 90, unit: "g" },
+    { name: "amandes grillées", quantity: 60, unit: "g" },
+    { name: "oignon rouge", quantity: 1, unit: "" },
+    { name: "chapelure assaisonnée", quantity: 60, unit: "g" },
+    { name: "eau", quantity: 60, unit: "ml" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre", quantity: 0, unit: "" },
+    { name: "pains à hamburger", quantity: 4, unit: "" },
+    { name: "mayonnaise", quantity: 60, unit: "ml" },
+    { name: "laitue", quantity: 4, unit: "feuilles" }
+  ],
+  instructions: [
+    "Préchauffer le four à 190 °C.",
+    "Dans un bol, battre les œufs.",
+    "Incorporer le brocoli, les amandes et l'oignon hachés, la chapelure et l'eau.",
+    "Saler et poivrer au goût.",
+    "Sur une plaque de cuisson huilée, façonner 4 galettes de 2 cm d'épaisseur.",
+    "Cuire au four environ 25 minutes en retournant à mi-cuisson, jusqu'à ce que les deux côtés soient dorés.",
+    "Servir dans les pains grillés avec de la mayonnaise et de la laitue."
+  ]
+},
+{
+  id: "salade-de-brocoli",
+  title: "Salade de brocoli",
+  image: "",
+  time: "8 h 20 min",
+  course: "side",
+  vegan: false,
+  diets: ["gluten-free", "dairy-free"],
+  allergens: ["eggs", "mustard", "tree-nuts", "sulfites"],
+  appliances: ["stovetop"],
+  servings: 12,
+  ingredients: [
+    { name: "brocoli", quantity: 750, unit: "g" },
+    { name: "bacon", quantity: 8, unit: "tranches" },
+    { name: "oignon rouge", quantity: 1, unit: "" },
+    { name: "raisins secs", quantity: 80, unit: "g" },
+    { name: "mayonnaise", quantity: 250, unit: "ml" },
+    { name: "sucre", quantity: 110, unit: "g" },
+    { name: "pacanes", quantity: 40, unit: "g" }, /* ou graines de tournesol */
+    { name: "vinaigre de cidre", quantity: 5, unit: "ml" }
+    /* facultatif
+    { name: "pomme", quantity: 1, unit: "" } */
+  ],
+  instructions: [
+    "Faire cuire le bacon jusqu'à ce qu'il soit croustillant, puis l'émietter.",
+    "Faire gonfler les raisins secs quelques minutes dans de l'eau bouillante, puis les égoutter.",
+    "Fouetter ensemble la mayonnaise, le sucre et le vinaigre.",
+    "Dans un grand bol, mélanger les bouquets de brocoli, le bacon, l'oignon haché, les raisins, les pacanes et la pomme hachée, si désiré. Ajouter la sauce et bien mélanger.",
+    "Couvrir et réfrigérer toute une nuit avant de servir.",
+    "Garder au réfrigérateur."
+  ]
+},
+{
+  id: "riz-brun-a-la-dinde-hachee",
+  title: "Riz brun à la dinde hachée",
+  image: "",
+  time: "30 min",
+  course: "main",
+  vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["soy", "gluten"],
+  appliances: ["stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "riz brun cuit", quantity: 390, unit: "g" },
+    { name: "dinde hachée extra-maigre", quantity: 570, unit: "g" },
+    { name: "tomates en dés aux piments verts", quantity: 340, unit: "ml" },
+    { name: "huile végétale", quantity: 30, unit: "ml" },
+    { name: "sauce teriyaki", quantity: 15, unit: "ml" },
+    { name: "piment de la jamaïque", quantity: 2, unit: "g" },
+    { name: "ail en poudre", quantity: 0, unit: "" },
+    { name: "poivre au citron", quantity: 0, unit: "" },
+    { name: "enduit à cuisson", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Vaporiser une poêle d'enduit à cuisson et saupoudrer d'ail en poudre, de poivre au citron et d'autres assaisonnements au goût. Ajouter la dinde et l'émietter pendant la cuisson. Ajouter les tomates et mélanger jusqu'à ce que la dinde soit cuite.",
+    "Verser l'huile dans un wok ou une poêle profonde. Ajouter le piment de la Jamaïque.",
+    "Pendant que la poêle chauffe, ajouter lentement le riz cuit en faisant attention aux éclaboussures d'huile chaude. Lorsque le riz est bien chaud, ajouter la sauce teriyaki et bien mélanger.",
+    "Lorsque la dinde est cuite, l'ajouter au riz dans le wok, bien mélanger et servir."
+  ]
+},
+{
+  id: "brownies-a-la-cassonade",
+  title: "Brownies à la cassonade",
+  image: "",
+  time: "1 h",
+  course: "dessert",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["milk", "eggs", "gluten", "tree-nuts"],
+  appliances: ["oven"],
+  servings: 24,
+  ingredients: [
+    { name: "cassonade", quantity: 220, unit: "g" },
+    { name: "beurre", quantity: 115, unit: "g" },
+    { name: "œufs", quantity: 2, unit: "" },
+    { name: "chocolat non sucré", quantity: 55, unit: "g" },
+    { name: "farine tout usage", quantity: 65, unit: "g" },
+    { name: "noix de Grenoble", quantity: 115, unit: "g" }
+  ],
+  instructions: [
+    "Préchauffer le four à 160 °C.",
+    "Graisser un moule carré de 20 x 20 cm.",
+    "Battre la cassonade et le beurre ramolli en crème jusqu'à ce que le mélange soit léger.",
+    "Incorporer les œufs en battant.",
+    "Faire fondre le chocolat et l'incorporer en battant.",
+    "Incorporer la farine, puis les noix hachées grossièrement.",
+    "Verser dans le moule préparé.",
+    "Cuire environ 25 minutes.",
+    "Laisser refroidir dans le moule, puis couper en carrés."
+  ]
+},
+{
+  id: "bruschetta",
+  title: "Bruschetta",
+  image: "",
+  time: "10 min",
+  course: "side",
+  vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "dairy-free", "pork-free"],
+  allergens: ["gluten"],
+  appliances: ["oven"],
+  servings: 8,
+  ingredients: [
+    { name: "baguette", quantity: 1, unit: "" }, /* ou pain italien */
+    { name: "ail", quantity: 0.5, unit: "tête" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre noir", quantity: 0, unit: "" },
+    { name: "huile d'olive extra vierge", quantity: 60, unit: "ml" },
+    { name: "tomates", quantity: 4, unit: "" },
+    { name: "basilic frais", quantity: 1, unit: "poignée" }
+  ],
+  instructions: [
+    "Trancher le pain en biais en tranches de 1 cm d'épaisseur.",
+    "Faire griller les tranches sous le gril du four, au grille-pain four ou sur le barbecue, jusqu'à ce qu'elles soient dorées.",
+    "Frotter aussitôt le pain avec le côté coupé de l'ail. Saler, poivrer et arroser généreusement d'huile d'olive.",
+    "Hacher les tomates et les mélanger avec le basilic déchiré.",
+    "Servir chaud, garni du mélange de tomates. D'autres garnitures sont possibles : haricots blancs cuits, champignons sautés, pancetta croustillante ou légumes d'été hachés."
+  ]
+},
+{
+  id: "bubble-and-squeak",
+  title: "Bubble and squeak (poêlée de légumes de la veille)",
+  image: "",
+  time: "15 min",
+  course: "side",
+  vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free"],
+  allergens: [],
+  appliances: ["stovetop"],
+  ingredients: [
+    { name: "oignon", quantity: 1, unit: "" },
+    { name: "huile végétale", quantity: 15, unit: "ml" },
+    { name: "pommes de terre cuites", quantity: 0, unit: "" },
+    { name: "chou cuit", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Faire revenir l'oignon haché dans l'huile (facultatif).",
+    "Hacher les légumes cuits qui restent (pommes de terre, chou, carottes, petits pois ou choux de Bruxelles) et les ajouter dans la poêle.",
+    "Cuire à feu moyen jusqu'à ce que le dessous soit doré et croustillant, puis retourner en grattant les morceaux croustillants dans le mélange. Répéter plusieurs fois jusqu'à ce que le tout soit doré et bien chaud."
+  ]
+},
+{
+  id: "galettes-de-sarrasin",
+  title: "Galettes de sarrasin",
+  image: "",
+  time: "1 h 30 min",
+  course: "main",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free"],
+  allergens: ["milk"],
+  appliances: ["stovetop"],
+  servings: 6,
+  ingredients: [
+    { name: "farine de sarrasin", quantity: 500, unit: "g" },
+    { name: "eau", quantity: 1, unit: "L" },
+    { name: "sel", quantity: 6, unit: "g" },
+    { name: "beurre", quantity: 30, unit: "g" }
+    /* facultatif
+    { name: "œuf", quantity: 1, unit: "" } */
+  ],
+  instructions: [
+    "Dans un grand bol, fouetter la farine et le sel.",
+    "Incorporer l'œuf (facultatif) et la moitié de l'eau en fouettant pour obtenir une pâte.",
+    "Couvrir d'un linge et laisser reposer 1 heure à température ambiante.",
+    "Incorporer graduellement le reste de l'eau au besoin : la pâte doit être assez fluide pour napper la poêle, sans être trop liquide. Il n'est pas toujours nécessaire d'ajouter toute l'eau.",
+    "Préparer les garnitures à l'avance, par exemple jambon, œuf et fromage râpé. Tout ce qui demande plus d'une minute de cuisson (oignons, champignons, viande…) doit être précuit.",
+    "Chauffer une grande poêle plate d'environ 30 cm à feu moyen.",
+    "Lorsque la poêle est chaude, la graisser d'une noix de beurre et l'étaler pour bien la couvrir.",
+    "Verser une louche de pâte et l'étaler pour obtenir une grande galette d'au plus 3 mm d'épaisseur.",
+    "Cuire jusqu'à ce que le dessus soit sec et le dessous légèrement doré, puis retourner avec une spatule.",
+    "Disposer la garniture au centre en laissant plusieurs centimètres libres tout autour. Une fois le dessous cuit, replier quatre bords vers le centre pour former un carré. Servir chaud.",
+    "Continuer jusqu'à épuisement de la pâte."
+  ]
+},
+{
+  id: "ailes-de-poulet-buffalo",
+  title: "Ailes de poulet Buffalo",
+  image: "",
+  time: "40 min",
+  course: "main",
+  vegan: false,
+  diets: ["pork-free", "low-carb"],
+  allergens: ["milk", "soy", "gluten"],
+  appliances: ["stovetop"],
+  servings: 6,
+  ingredients: [
+    { name: "ailes de poulet", quantity: 48, unit: "" }, /* sections d'ailes */
+    { name: "huile végétale", quantity: 0, unit: "" },
+    { name: "assaisonnement pour volaille", quantity: 0, unit: "" },
+    { name: "beurre non salé", quantity: 115, unit: "g" },
+    { name: "sauce piquante au chipotle", quantity: 125, unit: "ml" },
+    { name: "concentré de tomate", quantity: 60, unit: "ml" },
+    { name: "sauce soja", quantity: 15, unit: "ml" }
+  ],
+  instructions: [
+    "Saupoudrer le poulet d'assaisonnement pour volaille.",
+    "Chauffer l'huile de friture à 180 °C dans une grande casserole profonde. Frire les ailes 11 minutes, en plusieurs fois. Égoutter sur une grille.",
+    "Pendant ce temps, mélanger le beurre fondu, la sauce piquante, le concentré de tomate et la sauce soja. Ajouter les ailes, mélanger pour bien les enrober et servir."
+  ]
+},
+{
+  id: "bulgogi",
+  title: "Bulgogi (bœuf mariné coréen)",
+  image: "",
+  time: "45 min",
+  course: "main",
+  vegan: false,
+  diets: ["dairy-free", "pork-free"],
+  allergens: ["soy", "gluten", "sesame"],
+  appliances: ["stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "bœuf tranché finement", quantity: 450, unit: "g" },
+    { name: "oignons verts", quantity: 3, unit: "" },
+    { name: "sauce soja", quantity: 180, unit: "ml" },
+    { name: "sucre", quantity: 50, unit: "g" },
+    { name: "huile de sésame", quantity: 60, unit: "ml" },
+    { name: "poivre", quantity: 9, unit: "g" },
+    { name: "ail", quantity: 4, unit: "gousses" }
+    /* facultatif
+    { name: "champignons de Paris", quantity: 4, unit: "" },
+    { name: "oignon", quantity: 0.5, unit: "" },
+    { name: "mirin", quantity: 15, unit: "ml" } */
+  ],
+  instructions: [
+    "Dans un grand bol, mélanger le bœuf, les oignons verts tranchés en biais, la sauce soja, le sucre, l'huile de sésame, le poivre et l'ail haché. Laisser mariner au moins 30 minutes, idéalement toute une nuit au réfrigérateur pour plus de saveur et de tendreté.",
+    "Faire griller le bœuf dans une poêle bien chaude à feu moyen-vif, ou sur un gril de table.",
+    "Servir avec du riz."
+  ]
+},
+{
+  id: "tartelettes-au-beurre",
+  title: "Tartelettes au beurre",
+  image: "",
+  time: "1 h 10 min",
+  course: "dessert",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["gluten", "milk", "eggs", "tree-nuts", "sulfites"],
+  appliances: ["oven"],
+  servings: 24,
+  ingredients: [
+    { name: "graisse végétale", quantity: 200, unit: "g" },
+    { name: "beurre", quantity: 50, unit: "g" },
+    { name: "eau bouillante", quantity: 180, unit: "ml" },
+    { name: "farine tout usage", quantity: 375, unit: "g" },
+    { name: "levure chimique", quantity: 8, unit: "g" },
+    { name: "sel", quantity: 2, unit: "g" },
+    { name: "œufs", quantity: 2, unit: "" },
+    { name: "cassonade", quantity: 320, unit: "g" },
+    { name: "sirop de maïs", quantity: 125, unit: "ml" },
+    { name: "raisins secs", quantity: 150, unit: "g" }, /* ou raisins de Corinthe */
+    { name: "noix de Grenoble", quantity: 60, unit: "g" },
+    { name: "vinaigre blanc", quantity: 10, unit: "ml" },
+    { name: "extrait de vanille", quantity: 2.5, unit: "ml" },
+    { name: "semoule de maïs", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Battre la graisse végétale, 5 g de beurre et l'eau bouillante jusqu'à ce que le mélange soit crémeux.",
+    "Pendant que le mélange est encore tiède, y tamiser la farine, la levure chimique et presque tout le sel. Mélanger délicatement jusqu'à ce qu'une pâte se forme et en faire une grosse boule sans trop la pétrir.",
+    "Séparer la pâte en deux portions égales et réfrigérer de 20 à 40 minutes.",
+    "Diviser la pâte en 24 boules égales et abaisser chacune en un disque.",
+    "Préchauffer le four à 175 °C.",
+    "Bien battre les œufs. Ajouter la cassonade, le sirop de maïs et le reste du beurre, fondu, puis battre de nouveau.",
+    "Ajouter les raisins, les noix hachées, le vinaigre, une pincée de sel et la vanille, puis mélanger vigoureusement.",
+    "Saupoudrer un peu de semoule de maïs dans de petits moules à tartelettes, ou placer 24 moules en papier dans des moules à muffins.",
+    "Foncer les moules avec les disques de pâte.",
+    "Remplir les croûtes aux deux tiers de garniture.",
+    "Cuire environ 20 minutes, jusqu'à ce que la pâte soit légèrement dorée. Pour des tartelettes plus coulantes, cuire de 15 à 17 minutes.",
+    "Sortir du four et laisser refroidir."
+  ]
+},
+{
+  id: "soupe-a-la-courge-butternut",
+  title: "Soupe à la courge butternut",
+  image: "",
+  time: "1 h 30 min",
+  course: "main",
+  vegan: true,
+  diets: ["vegan", "vegetarian", "pescatarian", "gluten-free", "dairy-free", "pork-free"],
+  allergens: ["sulfites"],
+  appliances: ["oven", "stovetop", "blender"],
+  servings: 4,
+  ingredients: [
+    { name: "courge butternut", quantity: 1, unit: "" },
+    { name: "oignons", quantity: 2, unit: "" },
+    { name: "huile d'olive", quantity: 30, unit: "ml" },
+    { name: "ail", quantity: 2, unit: "gousses" },
+    { name: "bouillon de légumes", quantity: 1, unit: "L" }, /* ou bouillon de poulet */
+    { name: "xérès doux", quantity: 60, unit: "ml" },
+    { name: "muscade moulue", quantity: 2, unit: "g" }
+  ],
+  instructions: [
+    "Préchauffer le four à 200 °C.",
+    "Couper la courge en deux sur la longueur et retirer les graines. Peler les oignons et les couper en deux.",
+    "Badigeonner les oignons et la courge d'huile d'olive. Cuire à découvert environ 1 heure, jusqu'à ce qu'ils soient tendres. Laisser tiédir.",
+    "Prélever la chair de la courge à la cuillère et la mettre dans un mélangeur ou un robot culinaire. Ajouter les oignons et de 250 à 500 ml de bouillon. Réduire en purée lisse.",
+    "Verser dans une casserole. Ajouter l'ail émincé, le xérès et la muscade, puis remuer à feu moyen.",
+    "Ajouter le reste du bouillon et cuire jusqu'à ce que la soupe soit chaude. Assaisonner au goût."
+  ]
+},
+{
+  id: "sauce-bearnaise",
+  title: "Sauce béarnaise",
+  image: "",
+  time: "20 min",
+  course: "basic",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "gluten-free", "pork-free", "low-carb"],
+  allergens: ["eggs", "milk", "sulfites"],
+  appliances: ["stovetop"],
+  servings: 4,
+  ingredients: [
+    { name: "vinaigre d'estragon", quantity: 30, unit: "ml" },
+    { name: "vinaigre de xérès", quantity: 30, unit: "ml" }, /* ou vin blanc sec */
+    { name: "échalote", quantity: 1, unit: "" },
+    { name: "jaunes d'œufs", quantity: 2, unit: "" },
+    { name: "beurre", quantity: 100, unit: "g" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "piment de cayenne", quantity: 0, unit: "" },
+    { name: "estragon frais", quantity: 15, unit: "ml" },
+    { name: "persil frais", quantity: 15, unit: "ml" }
+  ],
+  instructions: [
+    "Mettre les vinaigres, l'échalote hachée finement, l'estragon et le persil hachés dans une petite casserole. Laisser mijoter jusqu'à ce qu'il ne reste qu'environ 15 ml de liquide. Filtrer et laisser refroidir. Ne pas utiliser d'estragon séché.",
+    "Faire fondre le beurre et le laisser tiédir : il doit être chaud, mais pas brûlant.",
+    "Dans un bol, ajouter les jaunes d'œufs à la réduction et fouetter jusqu'à ce que le mélange forme un ruban.",
+    "Placer le bol au-dessus d'une casserole d'eau chaude, au bain-marie, et continuer de fouetter. Ajouter graduellement le beurre fondu en fouettant jusqu'à ce que la sauce épaississe et que tout le beurre soit incorporé. Le bol doit être juste assez chaud pour qu'on puisse encore le toucher.",
+    "Assaisonner de sel et de piment de cayenne, puis servir."
+  ]
+},
+{
+  id: "sauce-bechamel",
+  title: "Sauce béchamel",
+  image: "",
+  time: "30 min",
+  course: "basic",
+  vegan: false,
+  diets: ["vegetarian", "pescatarian", "pork-free"],
+  allergens: ["milk", "gluten"],
+  appliances: ["stovetop"],
+  servings: 8,
+  ingredients: [
+    { name: "beurre", quantity: 50, unit: "g" },
+    { name: "farine tout usage", quantity: 50, unit: "g" },
+    { name: "lait entier", quantity: 1, unit: "L" },
+    { name: "oignon", quantity: 1, unit: "" },
+    { name: "feuille de laurier", quantity: 1, unit: "" },
+    { name: "sel", quantity: 0, unit: "" },
+    { name: "poivre", quantity: 0, unit: "" }
+  ],
+  instructions: [
+    "Dans une casserole, faire fondre le beurre à feu moyen-doux. Incorporer la farine au fouet pour faire un roux.",
+    "Cuire le roux à feu doux de 3 à 5 minutes, sans le laisser brunir. Cette cuisson élimine le goût de farine.",
+    "Dans une autre casserole, commencer à chauffer le lait. Peler l'oignon sans le couper.",
+    "Ajouter l'oignon et la feuille de laurier au lait. Remuer jusqu'à ce que le lait atteigne 80 °C, sans le laisser attacher au fond.",
+    "Retirer l'oignon et la feuille de laurier.",
+    "Incorporer graduellement le lait chaud au roux en fouettant. Saler et poivrer au goût.",
+    "Cuire 15 minutes en remuant, jusqu'à ce que la sauce ait épaissi et qu'il n'y ait aucun grumeau."
+  ]
 }
 
 
@@ -3679,7 +4990,14 @@ export const recipes: Recipe[] = [
 
 
 
-  
+
 
 
 ]
+
+// Le reste du Wikibooks Cookbook, en anglais, généré par « npm run convert:recipes »
+// (scripts/convert-wikibooks-recipes.js). Régimes, allergènes et appareils y sont
+// détectés par mots-clés.
+const wikibooksRecipes: Recipe[] = require("./wikibooks-recipes.json");
+
+export const recipes: Recipe[] = [...curatedRecipes, ...wikibooksRecipes];

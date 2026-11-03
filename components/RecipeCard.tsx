@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 
-import { Recipe } from "@/app/Food/data/recipe/recipe";
+import { Recipe } from "@/app/Food/data/recipe/types";
 
 type Props = {
   recipe: Recipe;
