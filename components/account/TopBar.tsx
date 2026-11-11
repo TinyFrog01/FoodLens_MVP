@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Palette } from "@/constants/theme";
+import { useLanguage } from "@/lib/i18n";
 
 export function useGoBack() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function TopBar({
 }) {
   const insets = useSafeAreaInsets();
   const goBack = useGoBack();
+  const { tr } = useLanguage();
 
   return (
     <View style={[styles.bar, { paddingTop: insets.top + 8 }]}>
@@ -32,7 +34,7 @@ export default function TopBar({
         style={({ pressed }) => [styles.back, pressed && { opacity: 0.7 }]}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Retour"
+        accessibilityLabel={tr("Retour", "Back")}
       >
         <Ionicons name="chevron-back" size={22} color={Palette.text} />
       </Pressable>

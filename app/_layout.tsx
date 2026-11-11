@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { Palette } from '@/constants/theme';
 import { AccountProvider, useAccount } from '@/context/AccountContext';
+import { useLanguage } from '@/lib/i18n';
 
 // Un seul thème, clair comme les écrans (fond blanc cassé, encre), même quand
 // le téléphone est en mode sombre : barres et écrans restent harmonisés.
@@ -24,8 +25,10 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  // La langue enregistrée d'abord : pas d'écran en français qui bascule en anglais.
+  const { loaded: languageLoaded } = useLanguage();
 
-  if (!loaded) {
+  if (!loaded || !languageLoaded) {
     return null;
   }
 

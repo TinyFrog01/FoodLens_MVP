@@ -6,19 +6,22 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AvatarButton from "@/components/account/AvatarButton";
 import { CardShadow, Palette, TextStyles } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
-
-// Exemples de demandes : un tap remplit la question.
-const SUGGESTIONS = [
-  "Sans gluten, en 30 minutes",
-  "Végétarien pour 4",
-  "Avec ce qu'il reste dans mon frigo",
-];
+import { useLanguage } from "@/lib/i18n";
 
 export default function Assistant() {
   const insets = useSafeAreaInsets();
   const { account } = useAccount();
+  const { tr } = useLanguage();
   const [question, setQuestion] = useState("");
-  const greeting = account ? `Bonjour ${account.self.name} !` : "Bonjour !";
+  const greeting = account
+    ? tr(`Bonjour ${account.self.name} !`, `Hello ${account.self.name}!`)
+    : tr("Bonjour !", "Hello!");
+  // Exemples de demandes : un tap remplit la question.
+  const suggestions = [
+    tr("Sans gluten, en 30 minutes", "Gluten-free, in 30 minutes"),
+    tr("Végétarien pour 4", "Vegetarian for 4"),
+    tr("Avec ce qu'il reste dans mon frigo", "With what's left in my fridge"),
+  ];
 
   return (
     <View style={[styles.page, { paddingTop: insets.top + 12 }]}>
@@ -30,8 +33,10 @@ export default function Assistant() {
         <AvatarButton />
       </View>
       <Text style={TextStyles.pageSubtitle}>
-        Demande une recette selon tes contraintes, ou envoie une photo pour identifier un
-        aliment.
+        {tr(
+          "Demande une recette selon tes contraintes, ou envoie une photo pour identifier un aliment.",
+          "Ask for a recipe that fits your needs, or send a photo to identify a food."
+        )}
       </Text>
 
       <View style={styles.searchBar}>
@@ -39,7 +44,7 @@ export default function Assistant() {
         <TextInput
           value={question}
           onChangeText={setQuestion}
-          placeholder="Demander une recette…"
+          placeholder={tr("Demander une recette…", "Ask for a recipe…")}
           placeholderTextColor="#A6A6A0"
           returnKeyType="send"
           style={styles.input}
@@ -47,7 +52,7 @@ export default function Assistant() {
       </View>
 
       <View style={styles.chips}>
-        {SUGGESTIONS.map((suggestion) => (
+        {suggestions.map((suggestion) => (
           <Pressable
             key={suggestion}
             onPress={() => setQuestion(suggestion)}

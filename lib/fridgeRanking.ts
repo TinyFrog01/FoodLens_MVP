@@ -1,5 +1,4 @@
-import type { Staple } from "@/app/Food/data/staples";
-import { getRecipeAvailability } from "@/app/Food/data/utils/ingredients";
+import { getRecipeAvailability, type OnHandCheck } from "@/app/Food/data/utils/ingredients";
 import type { RecipeVerdict } from "@/lib/account/recipeFilter";
 
 // Toutes les 4 cartes, une recette où il te manque des ingrédients : tu en
@@ -16,10 +15,10 @@ const byFridge = (a: Ranked, b: Ranked) =>
 // Classe les recettes selon ce que tu as : celles que tu peux faire tout de
 // suite en premier, avec une recette à compléter glissée de temps en temps,
 // puis toutes les autres, de la plus complète à la moins complète.
-export function rankByFridge(visible: RecipeVerdict[], alwaysOnHand: Staple[]): RecipeVerdict[] {
+export function rankByFridge(visible: RecipeVerdict[], isOnHand: OnHandCheck): RecipeVerdict[] {
   const ranked = visible
     .map((verdict, index) => {
-      const missing = getRecipeAvailability(verdict.recipe, alwaysOnHand).missingIngredients.length;
+      const missing = getRecipeAvailability(verdict.recipe, isOnHand).missingIngredients.length;
       return { verdict, have: verdict.recipe.ingredients.length - missing, missing, index };
     })
     .sort(byFridge);

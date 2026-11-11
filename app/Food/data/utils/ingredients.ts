@@ -1,6 +1,12 @@
-import { items } from "@/app/Food/data/items";
 import type { Staple } from "@/app/Food/data/staples";
 import { ingredientMatches } from "@/lib/account/recipeFilter";
+import { IngredientRef, makeFridgeMatcher } from "@/lib/fridgeMatch";
+
+export type { IngredientRef };
+
+// Vrai si tu as l'ingrédient : un essentiel « toujours là » activé, ou un
+// aliment confirmé sur tes photos.
+export type OnHandCheck = (ingredient: IngredientRef) => boolean;
 
 // A staple that's switched on covers every ingredient naming it, so "Poivre"
 // also covers "Poivre noir" and "Beurre" covers "beurre non salé".
@@ -11,29 +17,31 @@ const isCoveredByStaple = (ingredientName: string, alwaysOnHand: Staple[]) =>
     )
   );
 
-// Inventory items keep an exact name match: fuzzy search confuses "poivre"
-// with "Poire" and "Brie" with "Abricot".
-const isInInventory = (ingredientName: string) => {
-  const name = ingredientName.toLowerCase().trim();
-  return items.some(
-    (item) => item.quantity > 0 && item.name.toLowerCase().trim() === name
-  );
-};
+// `scanned` : les noms des aliments confirmés sur les photos, tels que l'IA
+// les a renvoyés. Les recettes répètent les mêmes ingrédients des milliers de
+// fois : chacun n'est vérifié qu'une fois par état du frigo.
+export function makeOnHandCheck(alwaysOnHand: Staple[], scanned: string[]): OnHandCheck {
+  const inFridge = makeFridgeMatcher(scanned);
+  const known = new Map<string, boolean>();
 
-export const isIngredientOnHand = (
-  ingredientName: string,
-  alwaysOnHand: Staple[]
-): boolean =>
-  isCoveredByStaple(ingredientName, alwaysOnHand) ||
-  isInInventory(ingredientName);
+  return (ingredient) => {
+    // L'unité compte : « 2 kg de poulet » est un poulet entier, « 250 ml de
+    // poulet » de la chair.
+    const key = `${ingredient.unit ?? ""}\n${ingredient.name}`;
+    let have = known.get(key);
+    if (have === undefined) {
+      have = isCoveredByStaple(ingredient.name, alwaysOnHand) || inFridge(ingredient);
+      known.set(key, have);
+    }
+    return have;
+  };
+}
 
 export const getRecipeAvailability = (
-  recipe: { ingredients: { name: string }[] },
-  alwaysOnHand: Staple[]
+  recipe: { ingredients: IngredientRef[] },
+  isOnHand: OnHandCheck
 ) => {
-  const missing = recipe.ingredients.filter(
-    (ing) => !isIngredientOnHand(ing.name, alwaysOnHand)
-  );
+  const missing = recipe.ingredients.filter((ing) => !isOnHand(ing));
 
   return {
     missingIngredients: missing.map((ing) => ing.name),

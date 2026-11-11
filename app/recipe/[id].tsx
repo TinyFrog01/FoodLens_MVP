@@ -1,12 +1,11 @@
 import { ricardoRecipes as recipes } from "@/app/Food/data/recipe/recipe_r";
-import { isIngredientOnHand } from "@/app/Food/data/utils/ingredients";
 import CookingMode from "@/components/CookingMode";
 import Avatar from "@/components/account/Avatar";
 import { CookingForSheet } from "@/components/account/CookingFor";
 import { allergenLabel, applianceLabel } from "@/constants/dietary";
 import { Palette } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
-import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
+import { useOnHand } from "@/hooks/useOnHand";
 import {
   describeReason,
   displayDiets,
@@ -17,6 +16,8 @@ import {
   personalizeIngredients,
 } from "@/lib/account/recipeFilter";
 import { confirmAction } from "@/lib/confirm";
+import { useLanguage } from "@/lib/i18n";
+import { recipeSteps, recipeTitle } from "@/lib/recipeText";
 import {
   defaultServings,
   formatIngredient,
@@ -73,7 +74,8 @@ export default function RecipePage() {
   const router = useRouter();
   const recipe = recipes.find((r) => r.id === id);
   const { account, toggleFavorite, updateCustomization } = useAccount();
-  const { activeStaples } = useAlwaysOnHand();
+  const { isOnHand } = useOnHand();
+  const { tr } = useLanguage();
   const insets = useSafeAreaInsets();
 
   // Hooks must run before the early return below.
@@ -107,12 +109,14 @@ export default function RecipePage() {
   if (!recipe || !verdict) {
     return (
       <View style={styles.center}>
-        <Text style={{ color: COLORS.subtext }}>Recette introuvable.</Text>
+        <Text style={{ color: COLORS.subtext }}>{tr("Recette introuvable.", "Recipe not found.")}</Text>
       </View>
     );
   }
 
   const people = account ? getCookingFor(account) : [];
+  const title = recipeTitle(recipe);
+  const steps = recipeSteps(recipe);
 
   // Portions : réglées d'office selon le profil sur les plats principaux
   // (2 pour toi, 4 pour ta famille), celles de la recette sinon — un gâteau
@@ -141,7 +145,7 @@ export default function RecipePage() {
   const dietTags = displayDiets(recipe);
   const personal = personalizeIngredients(recipe, custom);
   const kept = personal.filter((i) => !i.removed);
-  const available = kept.filter((i) => isIngredientOnHand(i.name, activeStaples));
+  const available = kept.filter((i) => isOnHand(i));
   const progressPct = kept.length
     ? Math.round((available.length / kept.length) * 100)
     : 0;
@@ -151,21 +155,31 @@ export default function RecipePage() {
 
   const askForAccount = (message: string) =>
     confirmAction({
-      title: "Crée ton compte gratuit",
+      title: tr("Crée ton compte gratuit", "Create your free account"),
       message,
-      confirmLabel: "Créer mon compte",
-      cancelLabel: "Plus tard",
+      confirmLabel: tr("Créer mon compte", "Create my account"),
+      cancelLabel: tr("Plus tard", "Later"),
       onConfirm: () => router.push({ pathname: "/auth", params: { mode: "signup" } }),
     });
 
   const onFavorite = () =>
     account
       ? toggleFavorite(recipe.id)
-      : askForAccount("Tes recettes favorites seront enregistrées et faciles à retrouver.");
+      : askForAccount(
+          tr(
+            "Tes recettes favorites seront enregistrées et faciles à retrouver.",
+            "Your favorite recipes will be saved and easy to find."
+          )
+        );
 
   const onPersonalize = () => {
     if (!account) {
-      askForAccount("Fais ta version : remplace ou retire des ingrédients et garde tes notes pour chaque recette.");
+      askForAccount(
+        tr(
+          "Fais ta version : remplace ou retire des ingrédients et garde tes notes pour chaque recette.",
+          "Make your version: swap or remove ingredients and keep your notes for each recipe."
+        )
+      );
       return;
     }
     setEditing((e) => !e);
@@ -215,7 +229,10 @@ export default function RecipePage() {
   if (verdict.missingAppliances.length > 0) {
     notices.push({
       key: "appliances",
-      text: `Nécessite : ${verdict.missingAppliances.map(applianceLabel).join(", ")} (tu n'en as pas)`,
+      text: tr(
+        `Nécessite : ${verdict.missingAppliances.map(applianceLabel).join(", ")} (tu n'en as pas)`,
+        `Needs: ${verdict.missingAppliances.map(applianceLabel).join(", ")} (you don't have one)`
+      ),
       icon: "alert-circle-outline",
       color: COLORS.subtext,
       bg: COLORS.bg,
@@ -224,7 +241,10 @@ export default function RecipePage() {
   verdict.dislikes.forEach(({ person, term }) =>
     notices.push({
       key: `dislike-${person}-${term}`,
-      text: `${person} n'aime pas : ${term}. Touche « Faire ta version » pour le remplacer.`,
+      text: tr(
+        `${person} n'aime pas : ${term}. Touche « Faire ta version » pour le remplacer.`,
+        `${person} dislikes: ${term}. Tap “Make your version” to swap it.`
+      ),
       icon: "thumbs-down-outline",
       color: COLORS.amber,
       bg: COLORS.amberSoft,
@@ -233,7 +253,7 @@ export default function RecipePage() {
   verdict.likes.forEach(({ person, term }) =>
     notices.push({
       key: `like-${person}-${term}`,
-      text: `${person} aime : ${term}`,
+      text: tr(`${person} aime : ${term}`, `${person} likes: ${term}`),
       icon: "heart",
       color: COLORS.green,
       bg: COLORS.greenSoft,
@@ -248,7 +268,7 @@ export default function RecipePage() {
           <Ionicons name="chevron-back" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.navbarTitle} numberOfLines={1}>
-          {recipe.title}
+          {title}
         </Text>
         <TouchableOpacity onPress={onFavorite} style={styles.navbarButton}>
           <Ionicons
@@ -269,10 +289,10 @@ export default function RecipePage() {
           {custom && (
             <View style={styles.versionPill}>
               <Ionicons name="create-outline" size={13} color={COLORS.text} />
-              <Text style={styles.versionText}>Ta version</Text>
+              <Text style={styles.versionText}>{tr("Ta version", "Your version")}</Text>
             </View>
           )}
-          <Text style={styles.title}>{recipe.title}</Text>
+          <Text style={styles.title}>{title}</Text>
 
           {/* Diet tags */}
           {dietTags.length > 0 && (
@@ -290,17 +310,17 @@ export default function RecipePage() {
             <View style={styles.factRow}>
               <Ionicons name="alert-circle-outline" size={16} color={COLORS.subtext} />
               <Text style={styles.factText}>
-                <Text style={styles.factLabel}>Allergènes : </Text>
+                <Text style={styles.factLabel}>{tr("Allergènes : ", "Allergens: ")}</Text>
                 {recipe.allergens.length > 0
                   ? recipe.allergens.map(allergenLabel).join(" · ")
-                  : "aucun allergène prioritaire"}
+                  : tr("aucun allergène prioritaire", "no priority allergens")}
               </Text>
             </View>
             {recipe.appliances.length > 0 && (
               <View style={[styles.factRow, { marginTop: 8 }]}>
                 <Ionicons name="flame-outline" size={16} color={COLORS.subtext} />
                 <Text style={styles.factText}>
-                  <Text style={styles.factLabel}>Appareils : </Text>
+                  <Text style={styles.factLabel}>{tr("Appareils : ", "Appliances: ")}</Text>
                   {recipe.appliances.map(applianceLabel).join(" · ")}
                 </Text>
               </View>
@@ -319,13 +339,13 @@ export default function RecipePage() {
                   ))}
                 </View>
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.forLabel}>Je cuisine pour</Text>
+                  <Text style={styles.forLabel}>{tr("Je cuisine pour", "I'm cooking for")}</Text>
                   <Text style={styles.forNames} numberOfLines={1}>
                     {formatNames(people.map((p) => p.name))}
                   </Text>
                 </View>
                 <TouchableOpacity onPress={() => setSheetOpen(true)} style={styles.forChange}>
-                  <Text style={styles.forChangeText}>Changer</Text>
+                  <Text style={styles.forChangeText}>{tr("Changer", "Change")}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -340,7 +360,10 @@ export default function RecipePage() {
                 <View style={[styles.notice, { backgroundColor: COLORS.greenSoft }]}>
                   <Ionicons name="checkmark-circle" size={16} color={COLORS.green} />
                   <Text style={[styles.noticeText, { color: COLORS.green }]}>
-                    Convient à tout le monde : régimes, allergies et appareils respectés.
+                    {tr(
+                      "Convient à tout le monde : régimes, allergies et appareils respectés.",
+                      "Suits everyone: diets, allergies and appliances respected."
+                    )}
                   </Text>
                 </View>
               )}
@@ -353,9 +376,12 @@ export default function RecipePage() {
             >
               <Ionicons name="people-outline" size={22} color={COLORS.green} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.guestTitle}>Adapte cette recette à ta famille</Text>
+                <Text style={styles.guestTitle}>{tr("Adapte cette recette à ta famille", "Fit this recipe to your family")}</Text>
                 <Text style={styles.guestText}>
-                  Crée ton compte pour tenir compte des régimes, des allergies et des goûts de chacun.
+                  {tr(
+                    "Crée ton compte pour tenir compte des régimes, des allergies et des goûts de chacun.",
+                    "Create your account to take everyone's diets, allergies and tastes into account."
+                  )}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={COLORS.subtext} />
@@ -367,7 +393,7 @@ export default function RecipePage() {
             <View style={styles.infoCol}>
               <Ionicons name="time-outline" size={18} color={COLORS.subtext} />
               <Text style={styles.infoValue}>{recipe.time || "—"}</Text>
-              <Text style={styles.infoLabel}>Temps</Text>
+              <Text style={styles.infoLabel}>{tr("Temps", "Time")}</Text>
             </View>
 
             <View style={styles.infoDivider} />
@@ -390,7 +416,7 @@ export default function RecipePage() {
                   <Ionicons name="add" size={16} color={COLORS.text} />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.infoLabel}>Portions</Text>
+              <Text style={styles.infoLabel}>{tr("Portions", "Servings")}</Text>
             </View>
           </View>
           {/* Portions par défaut selon le profil : on le dit, et on peut y revenir. */}
@@ -399,23 +425,25 @@ export default function RecipePage() {
               <TouchableOpacity onPress={resetServings} style={styles.servingsChip}>
                 <Ionicons name="refresh" size={14} color={COLORS.green} />
                 <Text style={styles.servingsChipText}>
-                  Revenir à {suggestedServings} portions
+                  {tr(`Revenir à ${suggestedServings} portions`, `Back to ${suggestedServings} servings`)}
                 </Text>
               </TouchableOpacity>
             </View>
           ) : suggestedServings !== baseServings ? (
             <Text style={styles.servingsNote}>
-              Réglé pour {profileLabel(peopleCount)} · recette d&apos;origine : {baseServings}{" "}
-              portions
+              {tr(
+                `Réglé pour ${profileLabel(peopleCount)} · recette d'origine : ${baseServings} portions`,
+                `Set for ${profileLabel(peopleCount)} · original recipe: ${baseServings} servings`
+              )}
             </Text>
           ) : null}
 
           {/* On-hand progress, styled after the Kitchen Inventory stats bar */}
           <View style={styles.progressCard}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Dans ton frigo</Text>
+              <Text style={styles.progressLabel}>{tr("Dans ton frigo", "In your fridge")}</Text>
               <Text style={styles.progressNumber}>
-                {available.length} sur {kept.length}
+                {tr(`${available.length} sur ${kept.length}`, `${available.length} of ${kept.length}`)}
               </Text>
             </View>
             <View style={styles.progressBackground}>
@@ -425,7 +453,7 @@ export default function RecipePage() {
 
           {/* Ingredients */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitleInline}>Ingrédients</Text>
+            <Text style={styles.sectionTitleInline}>{tr("Ingrédients", "Ingredients")}</Text>
             <TouchableOpacity
               onPress={onPersonalize}
               style={[styles.personalizeButton, editing && styles.personalizeButtonActive]}
@@ -436,29 +464,27 @@ export default function RecipePage() {
                 color={editing ? "#FFF" : COLORS.text}
               />
               <Text style={[styles.personalizeText, editing && { color: "#FFF" }]}>
-                {editing ? "Terminé" : "Faire ta version"}
+                {editing ? tr("Terminé", "Done") : tr("Faire ta version", "Make your version")}
               </Text>
             </TouchableOpacity>
           </View>
           {editing && (
             <Text style={styles.editingHint}>
-              Remplace ou retire un ingrédient : la recette devient ta version.
+              {tr(
+                "Remplace ou retire un ingrédient : la recette devient ta version.",
+                "Swap or remove an ingredient: the recipe becomes your version."
+              )}
             </Text>
           )}
           <View style={styles.sectionCard}>
             {personal.map((ingredient, idx) => {
-              const owned = isIngredientOnHand(ingredient.name, activeStaples);
+              const owned = isOnHand(ingredient);
               const changed = ingredient.removed || ingredient.swapped;
-              const dislikedBy = changed
-                ? []
-                : people
-                    .filter((p) => p.dislikes.some((t) => ingredientMatches(ingredient.originalName, t)))
-                    .map((p) => p.name);
-              const avoidedBy = changed
-                ? []
-                : people
-                    .filter((p) => p.avoid.some((t) => ingredientMatches(ingredient.originalName, t)))
-                    .map((p) => p.name);
+              // Goûts et allergies tapés en français ou en anglais.
+              const mentions = (terms: string[]) =>
+                terms.some((t) => ingredient.matchNames.some((n) => ingredientMatches(n, t)));
+              const dislikedBy = changed ? [] : people.filter((p) => mentions(p.dislikes)).map((p) => p.name);
+              const avoidedBy = changed ? [] : people.filter((p) => mentions(p.avoid)).map((p) => p.name);
 
               return (
                 <View
@@ -499,17 +525,20 @@ export default function RecipePage() {
                         </Text>
                         {ingredient.swapped && (
                           <Text style={styles.ingredientCaption}>
-                            au lieu de : {ingredient.originalName}
+                            {tr(`au lieu de : ${ingredient.originalLabel}`, `instead of: ${ingredient.originalLabel}`)}
                           </Text>
                         )}
                         {avoidedBy.length > 0 && (
                           <Text style={[styles.ingredientCaption, { color: COLORS.red }]}>
-                            À éviter pour {formatNames(avoidedBy)}
+                            {tr(`À éviter pour ${formatNames(avoidedBy)}`, `To avoid for ${formatNames(avoidedBy)}`)}
                           </Text>
                         )}
                         {dislikedBy.length > 0 && (
                           <Text style={[styles.ingredientCaption, { color: COLORS.amber }]}>
-                            {formatNames(dislikedBy)} n&apos;aime{dislikedBy.length > 1 ? "nt" : ""} pas
+                            {tr(
+                              `${formatNames(dislikedBy)} n'aime${dislikedBy.length > 1 ? "nt" : ""} pas`,
+                              `${formatNames(dislikedBy)} ${dislikedBy.length > 1 ? "don't" : "doesn't"} like it`
+                            )}
                           </Text>
                         )}
                       </View>
@@ -519,19 +548,19 @@ export default function RecipePage() {
                   {editing && (
                     <View style={styles.editActions}>
                       {ingredient.removed ? (
-                        <SmallButton label="Remettre" onPress={() => restoreIngredient(ingredient.originalName)} />
+                        <SmallButton label={tr("Remettre", "Put back")} onPress={() => restoreIngredient(ingredient.originalName)} />
                       ) : ingredient.swapped ? (
-                        <SmallButton label="Annuler le remplacement" onPress={() => undoSwap(ingredient.originalName)} />
+                        <SmallButton label={tr("Annuler le remplacement", "Undo the swap")} onPress={() => undoSwap(ingredient.originalName)} />
                       ) : (
                         <>
                           <SmallButton
-                            label="Remplacer"
+                            label={tr("Remplacer", "Swap")}
                             onPress={() => {
                               setSwapTarget(ingredient.originalName);
                               setSwapText("");
                             }}
                           />
-                          <SmallButton label="Retirer" onPress={() => removeIngredient(ingredient.originalName)} />
+                          <SmallButton label={tr("Retirer", "Remove")} onPress={() => removeIngredient(ingredient.originalName)} />
                         </>
                       )}
                     </View>
@@ -543,7 +572,7 @@ export default function RecipePage() {
                         value={swapText}
                         onChangeText={setSwapText}
                         onSubmitEditing={confirmSwap}
-                        placeholder={`Remplacer « ${ingredient.originalName} » par…`}
+                        placeholder={tr(`Remplacer « ${ingredient.originalLabel} » par…`, `Replace “${ingredient.originalLabel}” with…`)}
                         placeholderTextColor="#A6A6A0"
                         autoFocus
                         returnKeyType="done"
@@ -563,19 +592,19 @@ export default function RecipePage() {
               onPress={() => updateCustomization(recipe.id, { removed: [], swaps: {} })}
               style={styles.servingsReset}
             >
-              <Text style={styles.servingsResetText}>Rétablir les ingrédients d&apos;origine</Text>
+              <Text style={styles.servingsResetText}>{tr("Rétablir les ingrédients d'origine", "Restore the original ingredients")}</Text>
             </TouchableOpacity>
           )}
 
           {/* Instructions, in a highlighted card like the reference "Direction" panel */}
-          <Text style={styles.sectionTitle}>Étapes</Text>
+          <Text style={styles.sectionTitle}>{tr("Étapes", "Steps")}</Text>
           <View style={styles.stepsCard}>
-            {recipe.instructions.map((step, index) => (
+            {steps.map((step, index) => (
               <View
                 key={index}
                 style={[
                   styles.stepRow,
-                  index === recipe.instructions.length - 1 && { marginBottom: 0 },
+                  index === steps.length - 1 && { marginBottom: 0 },
                 ]}
               >
                 <View style={styles.stepCircle}>
@@ -589,12 +618,12 @@ export default function RecipePage() {
           {/* Notes personnelles */}
           {account && (
             <>
-              <Text style={styles.sectionTitle}>Tes notes</Text>
+              <Text style={styles.sectionTitle}>{tr("Tes notes", "Your notes")}</Text>
               <TextInput
                 value={noteDraft}
                 onChangeText={setNoteDraft}
                 onBlur={saveNote}
-                placeholder="Astuces, ajustements, avis de la famille…"
+                placeholder={tr("Astuces, ajustements, avis de la famille…", "Tips, tweaks, what the family thought…")}
                 placeholderTextColor="#A6A6A0"
                 multiline
                 style={styles.noteInput}
@@ -614,7 +643,7 @@ export default function RecipePage() {
             setIsCooking(true);
           }}
         >
-          <Text style={styles.ctaText}>Commencer à cuisiner</Text>
+          <Text style={styles.ctaText}>{tr("Commencer à cuisiner", "Start cooking")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -624,13 +653,14 @@ export default function RecipePage() {
       <CookingMode
         visible={isCooking}
         onClose={() => setIsCooking(false)}
-        title={recipe.title}
+        title={title}
         ingredients={kept.map((i) => ({
-          name: i.name,
+          name: i.label,
           unit: i.unit,
           quantity: i.quantity * scaleFactor,
+          originalName: i.originalName,
         }))}
-        instructions={recipe.instructions}
+        instructions={steps}
       />
 
       {account && <CookingForSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} />}

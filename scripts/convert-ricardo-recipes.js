@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { normalize, found, parseNumber, roundQuantity, formatMinutes, keysOf, NUMBER } = require("./convert-wikibooks-recipes");
+const { englishVersion, nameDictionary, nameStats, oddNames } = require("./ricardo-english");
 
 // Turns the recipes downloaded by scripts/scrape-ricardo-recipes.js into the app's
 // Recipe format, kept in French, in app/Food/data/recipe/recipe_r.ts, and lists every
@@ -20,7 +21,14 @@ const INGREDIENTS_FILE = path.join(RECIPE_DIR, "ingredients_r.ts");
 const CURATED_FILE = path.join(RECIPE_DIR, "recipe.ts");
 const WIKIBOOKS_FILE = path.join(RECIPE_DIR, "wikibooks-recipes.json");
 const DIETARY_FILE = path.join(__dirname, "../constants/dietary.ts");
+const TYPES_FILE = path.join(RECIPE_DIR, "types.ts");
 const PART_SIZE = 500; // recipes per array literal in recipe_r.ts
+// English version (see writeEnglish)
+const ENGLISH_INPUT_FILE = path.join(__dirname, "ricardo-recipes-en.json");
+const ENGLISH_EXTRA_FILE = path.join(__dirname, "ricardo-english-extra.json");
+const ENGLISH_TODO_FILE = path.join(__dirname, "ricardo-english-todo.json");
+const ENGLISH_CARDS_FILE = path.join(RECIPE_DIR, "recipe_r_en.json");
+const ENGLISH_STEPS_FILE = path.join(RECIPE_DIR, "recipe_r_en_steps.json");
 
 const ENTITIES = {
   nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", deg: "°", rsquo: "’",
@@ -318,6 +326,25 @@ function courseOf(page) {
   return { "Plats principaux": "main", Desserts: "dessert", "Entrées": "side" }[page.category] ?? "main";
 }
 
+// Rayons de recherche (RecipeCategory dans types.ts), d'après les rubriques de Ricardo.
+const CATEGORY_LISTINGS = [
+  ["sauce", /^entrees\/(sauces-beurres-et-pestos|mayonnaises-et-vinaigrettes|marinades-pour-bbq)$/],
+  ["soupe", /^(entrees\/soupes-et-potages|plats-principaux\/soupes-repas)$/],
+  ["salade", /^(entrees\/salades|plats-principaux\/salades-repas)$/],
+  ["accompagnement", /^entrees\/legumes-et-gratins$/],
+  ["bouchee", /^entrees\/(bouchees|entree|trempettes-et-tartinades-salees)$/],
+  ["boisson", /^entrees\/boissons-/],
+];
+
+function categoriesOf(page, course) {
+  const found = { main: ["souper"], dessert: ["dessert"], breakfast: ["dejeuner"] }[course] ?? [];
+  const listings = page.listings ?? [];
+  for (const [key, pattern] of CATEGORY_LISTINGS) {
+    if (listings.some((listing) => pattern.test(listing))) found.push(key);
+  }
+  return found;
+}
+
 // Rarer appliances only count when a step needs them, not in
 // "Au mélangeur ou au robot, réduire en purée".
 const ALTERNATIVE = /\b(ou|sinon|si desire|au choix|facultati\w*|si vous|si on|on peut|a defaut)\b/;
@@ -372,10 +399,27 @@ function servingsOf(text) {
 // Recipe
 // ─────────────────────────────────────────────
 
-function convert(page) {
+const convert = (page) => convertWithSources(page).recipe;
+
+// Also says which line of the page each ingredient comes from, for the English version:
+// sources[i] = { line, part, of } ("sel et poivre" is part 0 and 1 of 2 of its line).
+function convertWithSources(page) {
   const title = cleanText(page.title);
-  const lines = page.ingredients.map(cleanText).filter((line) => line && !EQUIPMENT.test(normalize(line)));
-  const ingredients = lines.flatMap(parseIngredient).filter((ingredient) => ingredient.name);
+  const lines = page.ingredients
+    .map((raw, line) => ({ text: cleanText(raw), line }))
+    .filter(({ text }) => text && !EQUIPMENT.test(normalize(text)));
+  const sources = [];
+  const ingredients = lines.flatMap(({ text, line }) => {
+    const parsed = parseIngredient(text);
+    return parsed
+      .map((ingredient, part) => ({ ingredient, source: { line, part, of: parsed.length } }))
+      .filter(({ ingredient }) => ingredient.name)
+      .map(({ ingredient, source }) => {
+        sources.push(source);
+        return ingredient;
+      });
+  });
+  const ingredientLines = lines.map(({ text }) => text);
   // One part of the method per titled section ("Glaçage : …"), except the one named after the recipe.
   const titled = page.instructions.length > 1;
   const instructions = page.instructions.flatMap(({ group, items }) => {
@@ -388,13 +432,14 @@ function convert(page) {
   });
 
   const course = courseOf(page);
-  const { allergens, diets, appliances } = tagsOf({ lines, steps: instructions, tags: page.tags, course });
+  const { allergens, diets, appliances } = tagsOf({ lines: ingredientLines, steps: instructions, tags: page.tags, course });
   const recipe = {
     id: page.sourceUrl.replace(/^.*\/recettes\/\d+-/, ""),
     title,
     image: page.image,
     time: timeOf(page),
     course,
+    categories: categoriesOf(page, course),
     vegan: diets.includes("vegan"),
     diets,
     allergens,
@@ -402,7 +447,7 @@ function convert(page) {
   };
   const servings = servingsOf(page.yield);
   if (servings) recipe.servings = servings;
-  return { ...recipe, ingredients, instructions, sourceUrl: page.sourceUrl };
+  return { recipe: { ...recipe, ingredients, instructions, sourceUrl: page.sourceUrl }, sources };
 }
 
 // ─────────────────────────────────────────────
@@ -422,6 +467,7 @@ function recipeSource(recipe) {
   const text = JSON.stringify;
   const lines = ["{"];
   for (const key of ["id", "title", "image", "time", "course"]) lines.push(`  ${key}: ${text(recipe[key])},`);
+  lines.push(`  categories: [${recipe.categories.map(text).join(", ")}],`);
   lines.push(`  vegan: ${recipe.vegan},`);
   for (const key of ["diets", "allergens", "appliances"]) lines.push(`  ${key}: [${recipe[key].map(text).join(", ")}],`);
   if (recipe.servings) lines.push(`  servings: ${recipe.servings},`);
@@ -486,9 +532,10 @@ function main() {
   }
 
   const recipes = [];
+  const origins = new Map(); // recipe -> { page, sources }
   let skippedEmpty = 0;
   for (const page of pages) {
-    const recipe = convert(page);
+    const { recipe, sources } = convertWithSources(page);
     if (recipe.ingredients.length === 0 || recipe.instructions.length === 0) {
       skippedEmpty++;
       continue;
@@ -497,6 +544,7 @@ function main() {
     for (let n = 2; ids.has(recipe.id); n++) recipe.id = `${base}-${n}`;
     ids.add(recipe.id);
     recipes.push(recipe);
+    origins.set(recipe, { page, sources });
   }
   recipes.sort((a, b) => a.title.localeCompare(b.title, "fr"));
 
@@ -507,6 +555,9 @@ function main() {
     const unknown = recipes.flatMap((r) => r[field]).filter((key) => !allowed.has(key));
     if (unknown.length > 0) throw new Error(`Unknown ${field}: ${[...new Set(unknown)].join(", ")}`);
   }
+  const categories = new Set(keysOf("RecipeCategory", fs.readFileSync(TYPES_FILE, "utf8")));
+  const unknownCategories = recipes.flatMap((r) => r.categories).filter((key) => !categories.has(key));
+  if (unknownCategories.length > 0) throw new Error(`Unknown categories: ${[...new Set(unknownCategories)].join(", ")}`);
 
   // One literal of 8,000+ recipes is "too complex to represent" for TypeScript: write blocks of them.
   const parts = [];
@@ -521,8 +572,150 @@ function main() {
   const ingredients = ingredientsOf(recipes);
   fs.writeFileSync(INGREDIENTS_FILE, ingredientsSource(ingredients));
   console.log(`✓ Listed ${ingredients.length} different ingredients in ${INGREDIENTS_FILE}`);
+
+  writeEnglish(recipes, origins);
+}
+
+// ─────────────────────────────────────────────
+// recipe_r_en.json + recipe_r_en_steps.json: the English version, by recipe id
+// ─────────────────────────────────────────────
+// Ricardo's own English page when there is one (scripts/ricardo-recipes-en.json,
+// from `npm run scrape:ricardo:en`), otherwise the translation kept in
+// scripts/ricardo-english-extra.json. Titles and names for the cards, the search and
+// the tastes are in the small file; the steps, read on the recipe page only, in the
+// other one.
+
+function writeEnglish(recipes, origins) {
+  if (!fs.existsSync(ENGLISH_INPUT_FILE)) {
+    console.log(`  no ${path.basename(ENGLISH_INPUT_FILE)}: English files left as they are (npm run scrape:ricardo:en)`);
+    return;
+  }
+  const downloaded = JSON.parse(fs.readFileSync(ENGLISH_INPUT_FILE, "utf8"));
+  const englishPages = new Map(downloaded.recipes.map((page) => [page.id, page]));
+  const extra = fs.existsSync(ENGLISH_EXTRA_FILE) ? JSON.parse(fs.readFileSync(ENGLISH_EXTRA_FILE, "utf8")) : {};
+
+  // First the recipes whose two lists line up...
+  const versions = new Map();
+  for (const recipe of recipes) {
+    const { page, sources } = origins.get(recipe);
+    const version = englishVersion({ page, englishPage: englishPages.get(page.id), recipe, sources, cleanText });
+    if (version) versions.set(recipe, version);
+  }
+
+  // ...which say what each French name is in English. A list can line up in length and
+  // still be shifted where no amount gives it away: checked against the other recipes.
+  const alignedPairs = () =>
+    [...versions].flatMap(([recipe, version]) =>
+      version.aligned ? recipe.ingredients.map((ingredient, i) => [ingredient.name, version.ingredients[i]]).filter(([, name]) => name) : []
+    );
+  const stats = nameStats(alignedPairs());
+  let fixedNames = 0;
+  let shiftedLists = 0;
+  for (const [recipe, version] of versions) {
+    if (!version.aligned) continue;
+    const odd = oddNames(recipe, version.ingredients, stats);
+    const count = odd.filter(Boolean).length;
+    if (count >= 2) {
+      const { page, sources } = origins.get(recipe);
+      versions.set(recipe, englishVersion({ page, englishPage: englishPages.get(page.id), recipe, sources, cleanText, shifted: true }));
+      shiftedLists++;
+    } else if (count === 1) {
+      const i = odd.indexOf(true);
+      const french = recipe.ingredients[i].name;
+      const usual = stats.get(french.replace(/\s*\(facultatif\)$/, "")).name;
+      version.ingredients[i] = /\(facultatif\)$/.test(french) ? `${usual} (optional)` : usual;
+      fixedNames++;
+    }
+  }
+  const dictionary = nameDictionary(alignedPairs());
+  for (const [french, english] of Object.entries(extra.ingredients ?? {})) dictionary.set(french, english);
+
+  // ...to match the lines of the others one by one.
+  for (const [recipe, version] of versions) {
+    if (version.aligned) continue;
+    const { page, sources } = origins.get(recipe);
+    versions.set(recipe, englishVersion({ page, englishPage: englishPages.get(page.id), recipe, sources, cleanText, dictionary }));
+  }
+
+  // Corrections to Ricardo's own English pages (a line or step left in French, a typo):
+  // replacements by position in the list as the converter writes it.
+  let corrections = 0;
+  const patch = (list, changes, what, id) => {
+    if (!changes) return list;
+    for (const index of Object.keys(changes)) {
+      if (!(Number(index) < list.length)) throw new Error(`${path.basename(ENGLISH_EXTRA_FILE)}: fixes.${id}.${what} has no line ${index}`);
+      corrections++;
+    }
+    return list.map((item, i) => changes[i] ?? item);
+  };
+
+  const cards = {};
+  const steps = {};
+  const missing = { recipes: [], ingredients: new Set() };
+  let fromDictionary = 0;
+  for (const recipe of recipes) {
+    const { page } = origins.get(recipe);
+    const fix = extra.fixes?.[page.id];
+    const version = versions.get(recipe) ?? extra.recipes?.[page.id];
+    if (!version) {
+      missing.recipes.push(recipe);
+      continue;
+    }
+    if (!versions.has(recipe) && version.ingredients.length !== recipe.ingredients.length) {
+      // The names go with the French ingredients one by one: a shifted list would mislabel them.
+      throw new Error(
+        `${path.basename(ENGLISH_EXTRA_FILE)}: recipe ${page.id} has ${version.ingredients.length} ingredient names for ${recipe.ingredients.length} ingredients`
+      );
+    }
+    const names = recipe.ingredients.map((ingredient, i) => {
+      if (version.ingredients?.[i]) return version.ingredients[i];
+      const key = ingredient.name.replace(/\s*\(facultatif\)$/, "");
+      const known = dictionary.get(key);
+      if (!known) {
+        missing.ingredients.add(key);
+        return ingredient.name; // shown in French rather than not at all
+      }
+      fromDictionary++;
+      return key === ingredient.name ? known : `${known} (optional)`;
+    });
+    if (fix?.title) corrections++;
+    cards[recipe.id] = { title: fix?.title ?? version.title, ingredients: patch(names, fix?.ingredients, "ingredients", page.id) };
+    steps[recipe.id] = {
+      instructions: patch(version.instructions, fix?.instructions, "instructions", page.id),
+      ...(version.sourceUrl ? { sourceUrl: version.sourceUrl } : {}),
+    };
+  }
+
+  fs.writeFileSync(ENGLISH_CARDS_FILE, `${JSON.stringify(cards, null, 0).replace(/\},"/g, '},\n"')}\n`);
+  fs.writeFileSync(ENGLISH_STEPS_FILE, `${JSON.stringify(steps, null, 0).replace(/\},"/g, '},\n"')}\n`);
+  const aligned = [...versions.values()].filter((version) => version.aligned).length;
+  console.log(`✓ English for ${Object.keys(cards).length} recipes in ${ENGLISH_CARDS_FILE} and ${path.basename(ENGLISH_STEPS_FILE)}`);
+  console.log(`  ${versions.size} from Ricardo's English pages (${aligned} with their ingredient lines lined up), ${Object.keys(cards).length - versions.size} from ${path.basename(ENGLISH_EXTRA_FILE)}`);
+  console.log(`  ${fromDictionary} ingredient names taken from other recipes, ${missing.ingredients.size} left in French`);
+  console.log(`  checked against the other recipes: ${fixedNames} names corrected, ${shiftedLists} shifted lists matched line by line`);
+  if (corrections > 0) console.log(`  ${corrections} corrections to Ricardo's English pages from ${path.basename(ENGLISH_EXTRA_FILE)}`);
+  // What is left to translate into ricardo-english-extra.json: the recipes Ricardo never
+  // translated (with the names other recipes already give their ingredients), and the
+  // ingredient names shown in French.
+  const noEnglish = new Set(downloaded.missing);
+  const untranslated = missing.recipes.filter((recipe) => noEnglish.has(origins.get(recipe).page.id));
+  const notDownloaded = missing.recipes.length - untranslated.length;
+  if (untranslated.length > 0) {
+    console.log(`  ${untranslated.length} recipes Ricardo never translated, to add to ${path.basename(ENGLISH_EXTRA_FILE)} (see ${path.basename(ENGLISH_TODO_FILE)})`);
+  }
+  if (notDownloaded > 0) console.log(`  ${notDownloaded} recipes not downloaded in English yet (npm run scrape:ricardo:en)`);
+  const todo = {
+    recipes: untranslated.map((recipe) => ({
+      id: origins.get(recipe).page.id,
+      title: recipe.title,
+      ingredients: recipe.ingredients.map(({ name }) => [name, dictionary.get(name.replace(/\s*\(facultatif\)$/, "")) ?? null]),
+      instructions: recipe.instructions,
+    })),
+    ingredients: [...missing.ingredients].sort(),
+  };
+  fs.writeFileSync(ENGLISH_TODO_FILE, `${JSON.stringify(todo, null, 1)}\n`);
 }
 
 if (require.main === module) main();
 
-module.exports = { convert, parseIngredient, tagsOf };
+module.exports = { convert, parseIngredient, tagsOf, cleanText };

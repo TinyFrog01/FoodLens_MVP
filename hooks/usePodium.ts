@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 
-import { staples } from "@/app/Food/data/staples";
 import { buildPodium } from "@/lib/podium";
 
-import { useAlwaysOnHand } from "./useAlwaysOnHand";
+import { useOnHand } from "./useOnHand";
 import { useRecipeFeed } from "./useRecipeFeed";
 
 // Or, argent et bronze pour les personnes choisies, selon ce que tu as.
@@ -11,12 +10,9 @@ import { useRecipeFeed } from "./useRecipeFeed";
 // bougera plus sous les yeux de l'utilisateur.
 export function usePodium() {
   const { visible } = useRecipeFeed();
-  const { activeIds, loaded } = useAlwaysOnHand();
+  const { isOnHand, loaded } = useOnHand();
 
-  const podium = useMemo(
-    () => buildPodium(visible, staples.filter((s) => activeIds.includes(s.id))),
-    [visible, activeIds]
-  );
+  const podium = useMemo(() => buildPodium(visible, isOnHand), [visible, isOnHand]);
 
   return { ...podium, loaded };
 }

@@ -8,9 +8,11 @@ import { CameraTabButton } from "@/components/CameraTabButton";
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { Palette } from "@/constants/theme";
+import { useLanguage } from "@/lib/i18n";
 
 // Quatre onglets autour d'une seule action principale : la caméra, au centre.
 export default function TabLayout() {
+  const { tr } = useLanguage();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Tabs
@@ -31,7 +33,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: "Ce soir",
+            title: tr("Ce soir", "Tonight"),
             tabBarIcon: ({ color, focused }) => (
               <Ionicons name={focused ? "restaurant" : "restaurant-outline"} size={24} color={color} />
             ),
@@ -40,7 +42,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="recettes"
           options={{
-            title: "Tes photos",
+            title: tr("Tes photos", "Your photos"),
             tabBarIcon: ({ color, focused }) => (
               <Ionicons name={focused ? "images" : "images-outline"} size={24} color={color} />
             ),
@@ -49,14 +51,14 @@ export default function TabLayout() {
         <Tabs.Screen
           name="camera"
           options={{
-            title: "Scanner",
+            title: tr("Scanner", "Scan"),
             tabBarButton: CameraTabButton,
           }}
         />
         <Tabs.Screen
           name="aliments"
           options={{
-            title: "Ton frigo",
+            title: tr("Ton frigo", "Your fridge"),
             tabBarIcon: ({ color, focused }) => (
               <MaterialCommunityIcons
                 name={focused ? "fridge" : "fridge-outline"}

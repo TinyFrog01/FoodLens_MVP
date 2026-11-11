@@ -4,6 +4,7 @@ import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import LanguageSwitch from "@/components/LanguageSwitch";
 import Avatar from "@/components/account/Avatar";
 import { PrimaryButton, SecondaryButton, TextButton } from "@/components/account/Buttons";
 import TopBar from "@/components/account/TopBar";
@@ -14,24 +15,72 @@ import { useRecipeFeed } from "@/hooks/useRecipeFeed";
 import { describeMember, getAllMembers, isSelf } from "@/lib/account/recipeFilter";
 import { Account } from "@/lib/account/types";
 import { confirmAction } from "@/lib/confirm";
+import { localeOf, tr, useLanguage } from "@/lib/i18n";
 
 type IconName = keyof typeof MaterialCommunityIcons.glyphMap;
 
 export default function Profile() {
   const { account } = useAccount();
+  useLanguage(); // redessine l'écran quand la langue change
   return account ? <AccountProfile account={account} /> : <GuestProfile />;
+}
+
+// ─────────────────────────────────────────────
+// Paramètres : la langue de l'app (textes et recettes)
+// ─────────────────────────────────────────────
+function SettingsSection() {
+  return (
+    <>
+      <Text style={styles.sectionLabel}>{tr("Paramètres", "Settings")}</Text>
+      <View style={styles.listCard}>
+        <View style={[styles.row, { borderBottomWidth: 0 }]}>
+          <View style={styles.rowIcon}>
+            <MaterialCommunityIcons name="translate" size={20} color={Palette.green} />
+          </View>
+          <View style={styles.rowText}>
+            <Text style={styles.rowLabel}>{tr("Langue", "Language")}</Text>
+            <Text style={styles.rowValue}>
+              {tr("L'app et toutes les recettes", "The app and every recipe")}
+            </Text>
+            <View style={{ marginTop: 10 }}>
+              <LanguageSwitch />
+            </View>
+          </View>
+        </View>
+      </View>
+    </>
+  );
 }
 
 // ─────────────────────────────────────────────
 // Invité : ce qu'un compte apporte
 // ─────────────────────────────────────────────
 const PERKS: { icon: IconName; text: string }[] = [
-  { icon: "leaf", text: "Filtrer les recettes selon ton régime" },
-  { icon: "shield-check-outline", text: "Masquer celles qui contiennent tes allergènes" },
-  { icon: "stove", text: "Ne voir que ce que tes appareils permettent" },
-  { icon: "account-group-outline", text: "Ajouter ta famille, ses goûts et ce qu'elle n'aime pas" },
-  { icon: "account-heart", text: "Choisir pour qui tu cuisines, avec des portions réglées d'office" },
-  { icon: "heart-outline", text: "Tes favoris, tes notes et ta version des recettes" },
+  { icon: "leaf", get text() { return tr("Filtrer les recettes selon ton régime", "Filter recipes by your diet"); } },
+  {
+    icon: "shield-check-outline",
+    get text() { return tr("Masquer celles qui contiennent tes allergènes", "Hide those that contain your allergens"); },
+  },
+  { icon: "stove", get text() { return tr("Ne voir que ce que tes appareils permettent", "Only see what your appliances allow"); } },
+  {
+    icon: "account-group-outline",
+    get text() {
+      return tr("Ajouter ta famille, ses goûts et ce qu'elle n'aime pas", "Add your family, their tastes and what they dislike");
+    },
+  },
+  {
+    icon: "account-heart",
+    get text() {
+      return tr(
+        "Choisir pour qui tu cuisines, avec des portions réglées d'office",
+        "Choose who you're cooking for, with servings set automatically"
+      );
+    },
+  },
+  {
+    icon: "heart-outline",
+    get text() { return tr("Tes favoris, tes notes et ta version des recettes", "Your favorites, your notes and your version of recipes"); },
+  },
 ];
 
 function GuestProfile() {
@@ -43,14 +92,14 @@ function GuestProfile() {
     <View style={styles.page}>
       <TopBar />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 30 }]}>
-        <Text style={TextStyles.eyebrow}>TON COMPTE</Text>
-        <Text style={TextStyles.pageTitle}>Mode invité</Text>
+        <Text style={TextStyles.eyebrow}>{tr("TON COMPTE", "YOUR ACCOUNT")}</Text>
+        <Text style={TextStyles.pageTitle}>{tr("Mode invité", "Guest mode")}</Text>
         <Text style={TextStyles.pageSubtitle}>
-          Tu vois toutes les recettes, sans personnalisation.
+          {tr("Tu vois toutes les recettes, sans personnalisation.", "You see every recipe, without personalization.")}
         </Text>
 
         <View style={styles.perksCard}>
-          <Text style={styles.perksTitle}>Avec un compte gratuit :</Text>
+          <Text style={styles.perksTitle}>{tr("Avec un compte gratuit :", "With a free account:")}</Text>
           {PERKS.map((p) => (
             <View key={p.text} style={styles.perk}>
               <View style={styles.perkIcon}>
@@ -63,15 +112,17 @@ function GuestProfile() {
 
         <View style={{ gap: 10, marginTop: 22 }}>
           <PrimaryButton
-            label="Créer mon compte"
+            label={tr("Créer mon compte", "Create my account")}
             onPress={() => router.push({ pathname: "/auth", params: { mode: "signup" } })}
           />
           <SecondaryButton
-            label="Se connecter"
+            label={tr("Se connecter", "Log in")}
             onPress={() => router.push({ pathname: "/auth", params: { mode: "login" } })}
           />
-          <TextButton label="Revenir à l'écran d'accueil" color={Palette.muted} onPress={logOut} />
+          <TextButton label={tr("Revenir à l'écran d'accueil", "Back to the welcome screen")} color={Palette.muted} onPress={logOut} />
         </View>
+
+        <SettingsSection />
       </ScrollView>
     </View>
   );
@@ -103,14 +154,17 @@ function AccountProfile({ account }: { account: Account }) {
 
   const confirmDelete = () =>
     confirmAction({
-      title: "Supprimer le compte ?",
-      message: "Ton profil, ta famille, tes favoris et tes notes seront effacés de cet appareil.",
-      confirmLabel: "Supprimer",
+      title: tr("Supprimer le compte ?", "Delete the account?"),
+      message: tr(
+        "Ton profil, ta famille, tes favoris et tes notes seront effacés de cet appareil.",
+        "Your profile, family, favorites and notes will be erased from this device."
+      ),
+      confirmLabel: tr("Supprimer", "Delete"),
       destructive: true,
       onConfirm: deleteAccount,
     });
 
-  const createdAt = new Date(account.createdAt).toLocaleDateString("fr-CA", {
+  const createdAt = new Date(account.createdAt).toLocaleDateString(localeOf(), {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -136,12 +190,12 @@ function AccountProfile({ account }: { account: Account }) {
           </View>
           <Pressable onPress={() => openMember(account.self.id)} style={styles.editPill}>
             <Ionicons name="pencil" size={14} color={Palette.text} />
-            <Text style={styles.editPillText}>Modifier</Text>
+            <Text style={styles.editPillText}>{tr("Modifier", "Edit")}</Text>
           </Pressable>
         </View>
 
         {/* Je cuisine pour */}
-        <Text style={styles.sectionLabel}>Je cuisine pour</Text>
+        <Text style={styles.sectionLabel}>{tr("Je cuisine pour", "I'm cooking for")}</Text>
         <View style={styles.card}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {everyone.map((m) => {
@@ -163,7 +217,7 @@ function AccountProfile({ account }: { account: Account }) {
                     )}
                   </View>
                   <Text style={[styles.personName, !on && { color: Palette.muted }]} numberOfLines={1}>
-                    {isSelf(m) ? "Moi" : m.name}
+                    {isSelf(m) ? tr("Moi", "Me") : m.name}
                   </Text>
                 </Pressable>
               );
@@ -172,17 +226,19 @@ function AccountProfile({ account }: { account: Account }) {
               <View style={styles.personAdd}>
                 <Ionicons name="add" size={24} color={Palette.green} />
               </View>
-              <Text style={[styles.personName, { color: Palette.green }]}>Ajouter</Text>
+              <Text style={[styles.personName, { color: Palette.green }]}>{tr("Ajouter", "Add")}</Text>
             </Pressable>
           </ScrollView>
           <Text style={[TextStyles.sectionHint, { marginTop: 10 }]}>
-            {selected.length} personne{selected.length > 1 ? "s" : ""} · les recettes
-            s&apos;adaptent aux régimes, aux allergies et aux goûts de chacun.
+            {tr(
+              `${selected.length} personne${selected.length > 1 ? "s" : ""} · les recettes s'adaptent aux régimes, aux allergies et aux goûts de chacun.`,
+              `${selected.length} ${selected.length > 1 ? "people" : "person"} · recipes adapt to everyone's diets, allergies and tastes.`
+            )}
           </Text>
         </View>
 
         {/* Famille */}
-        <Text style={styles.sectionLabel}>Ta famille</Text>
+        <Text style={styles.sectionLabel}>{tr("Ta famille", "Your family")}</Text>
         <View style={styles.listCard}>
           {account.members.map((m) => (
             <Pressable key={m.id} onPress={() => openMember(m.id)} style={styles.row}>
@@ -201,25 +257,30 @@ function AccountProfile({ account }: { account: Account }) {
               <Ionicons name="add" size={20} color={Palette.green} />
             </View>
             <View style={styles.rowText}>
-              <Text style={[styles.rowLabel, { color: Palette.green }]}>Ajouter un membre</Text>
-              <Text style={styles.rowValue}>Ses goûts, ce qu&apos;il n&apos;aime pas, ses allergies</Text>
+              <Text style={[styles.rowLabel, { color: Palette.green }]}>{tr("Ajouter un membre", "Add a member")}</Text>
+              <Text style={styles.rowValue}>
+                {tr("Ses goûts, ce qu'il n'aime pas, ses allergies", "Their tastes, dislikes and allergies")}
+              </Text>
             </View>
           </Pressable>
         </View>
 
         {/* Préférences */}
-        <Text style={styles.sectionLabel}>Tes préférences</Text>
+        <Text style={styles.sectionLabel}>{tr("Tes préférences", "Your preferences")}</Text>
         <View style={styles.listCard}>
           <Row
             icon="food-apple-outline"
-            label="Ton profil alimentaire"
+            label={tr("Ton profil alimentaire", "Your food profile")}
             value={describeMember(account.self)}
             onPress={() => openMember(account.self.id)}
           />
           <Row
             icon="stove"
-            label="Appareils de cuisine"
-            value={`${account.appliances.length} appareil${account.appliances.length > 1 ? "s" : ""}`}
+            label={tr("Appareils de cuisine", "Kitchen appliances")}
+            value={tr(
+              `${account.appliances.length} appareil${account.appliances.length > 1 ? "s" : ""}`,
+              `${account.appliances.length} appliance${account.appliances.length === 1 ? "" : "s"}`
+            )}
             onPress={() => router.push("/appliances")}
           />
           <View style={styles.row}>
@@ -227,7 +288,7 @@ function AccountProfile({ account }: { account: Account }) {
               <MaterialCommunityIcons name="timer-outline" size={20} color={Palette.green} />
             </View>
             <View style={styles.rowText}>
-              <Text style={styles.rowLabel}>Temps de préparation max</Text>
+              <Text style={styles.rowLabel}>{tr("Temps de préparation max", "Max prep time")}</Text>
               <View style={styles.timeChips}>
                 {MAX_TIME_OPTIONS.map((o) => {
                   const on = account.maxMinutes === o.value;
@@ -247,35 +308,43 @@ function AccountProfile({ account }: { account: Account }) {
         </View>
 
         {/* Recettes */}
-        <Text style={styles.sectionLabel}>Tes recettes</Text>
+        <Text style={styles.sectionLabel}>{tr("Tes recettes", "Your recipes")}</Text>
         <View style={styles.listCard}>
           <Row
             icon="heart-outline"
-            label="Tes favoris"
-            value={`${account.favorites.length} recette${account.favorites.length > 1 ? "s" : ""}`}
+            label={tr("Tes favoris", "Your favorites")}
+            value={tr(
+              `${account.favorites.length} recette${account.favorites.length > 1 ? "s" : ""}`,
+              `${account.favorites.length} recipe${account.favorites.length === 1 ? "" : "s"}`
+            )}
             onPress={() => openRecipes("favorites")}
           />
           <Row
             icon="pencil-outline"
-            label="Tes versions"
-            value={`${customCount} recette${customCount > 1 ? "s" : ""} avec tes notes ou tes changements`}
+            label={tr("Tes versions", "Your versions")}
+            value={tr(
+              `${customCount} recette${customCount > 1 ? "s" : ""} avec tes notes ou tes changements`,
+              `${customCount} recipe${customCount === 1 ? "" : "s"} with your notes or changes`
+            )}
             onPress={() => openRecipes("custom")}
           />
           <Row
             icon="eye-off-outline"
-            label="Recettes masquées"
-            value={`${hidden.length} selon tes filtres actuels`}
+            label={tr("Recettes masquées", "Hidden recipes")}
+            value={tr(`${hidden.length} selon tes filtres actuels`, `${hidden.length} with your current filters`)}
             onPress={() => openRecipes("hidden")}
           />
         </View>
 
         {/* Compte */}
-        <Text style={styles.sectionLabel}>Compte</Text>
+        <SettingsSection />
+
+        <Text style={styles.sectionLabel}>{tr("Compte", "Account")}</Text>
         <View style={styles.listCard}>
-          <Row icon="logout" label="Se déconnecter" onPress={logOut} chevron={false} />
+          <Row icon="logout" label={tr("Se déconnecter", "Log out")} onPress={logOut} chevron={false} />
           <Row
             icon="delete-outline"
-            label="Supprimer le compte"
+            label={tr("Supprimer le compte", "Delete the account")}
             onPress={confirmDelete}
             danger
             chevron={false}
@@ -283,7 +352,10 @@ function AccountProfile({ account }: { account: Account }) {
         </View>
 
         <Text style={styles.footnote}>
-          Compte créé le {createdAt} · enregistré sur cet appareil
+          {tr(
+            `Compte créé le ${createdAt} · enregistré sur cet appareil`,
+            `Account created on ${createdAt} · saved on this device`
+          )}
         </Text>
       </ScrollView>
     </View>

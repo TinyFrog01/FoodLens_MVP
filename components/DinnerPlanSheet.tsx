@@ -8,6 +8,7 @@ import { PrimaryButton, TextButton } from "@/components/account/Buttons";
 import { Palette } from "@/constants/theme";
 import { useDinnerPlan } from "@/hooks/useDinnerPlan";
 import { DinnerPlan, PLAN_TIMES, PlanTime, WEEK_DAYS, describePlan } from "@/lib/dinnerPlan";
+import { useLanguage } from "@/lib/i18n";
 
 // Deux questions, puis le plan en une phrase que la personne valide
 // elle-même : choisir son plan engage plus qu'un rappel imposé.
@@ -51,6 +52,7 @@ function PlanForm({
   initial: DinnerPlan | null;
   onSave: (plan: DinnerPlan | null) => void;
 }) {
+  const { tr } = useLanguage();
   const [days, setDays] = useState<number[]>(initial?.days ?? []);
   const [time, setTime] = useState<PlanTime | null>(initial?.time ?? null);
   const draft = days.length > 0 && time ? { days, time } : null;
@@ -62,9 +64,9 @@ function PlanForm({
 
   return (
     <>
-      <Text style={styles.title}>Ton plan souper</Text>
+      <Text style={styles.title}>{tr("Ton plan souper", "Your dinner plan")}</Text>
 
-      <Text style={styles.question}>Quels soirs veux-tu cuisiner ?</Text>
+      <Text style={styles.question}>{tr("Quels soirs veux-tu cuisiner ?", "Which evenings do you want to cook?")}</Text>
       <View style={styles.row}>
         {WEEK_DAYS.map((d) => (
           <Choice
@@ -77,7 +79,7 @@ function PlanForm({
         ))}
       </View>
 
-      <Text style={styles.question}>À quelle heure veux-tu ta suggestion ?</Text>
+      <Text style={styles.question}>{tr("À quelle heure veux-tu ta suggestion ?", "What time do you want your suggestion?")}</Text>
       <View style={styles.row}>
         {PLAN_TIMES.map((t) => (
           <Choice
@@ -96,18 +98,20 @@ function PlanForm({
           color={draft ? Palette.green : Palette.muted}
         />
         <Text style={[styles.planText, !draft && { color: Palette.muted }]}>
-          {draft ? describePlan(draft) : "Choisis tes soirs et ton heure : ton plan s'écrit ici."}
+          {draft
+            ? describePlan(draft)
+            : tr("Choisis tes soirs et ton heure : ton plan s'écrit ici.", "Pick your evenings and time: your plan is written here.")}
         </Text>
       </View>
 
       <PrimaryButton
-        label="C'est mon plan"
+        label={tr("C'est mon plan", "That's my plan")}
         disabled={!draft}
         onPress={() => draft && onSave(draft)}
       />
       {initial && (
         <TextButton
-          label="Retirer mon plan"
+          label={tr("Retirer mon plan", "Remove my plan")}
           color={Palette.muted}
           onPress={() => onSave(null)}
           style={{ marginTop: 6 }}

@@ -13,7 +13,9 @@ import {
 
 import { getRecipePhoto } from "@/app/Food/data/recipe/photos";
 import { Palette } from "@/constants/theme";
+import { useLanguage } from "@/lib/i18n";
 import { FridgeMatch, haveLabel, missingLabel } from "@/lib/podium";
+import { recipeTitle } from "@/lib/recipeText";
 
 import Medal from "./Medal";
 import Scrim from "./Scrim";
@@ -50,6 +52,7 @@ export default function GoldHero({
   ready,
   footer,
 }: Props) {
+  const { tr } = useLanguage();
   const [revealed, setRevealed] = useState(revealPlayed);
   const [photo] = useState(() => new Animated.Value(revealPlayed ? 1 : 0));
   const [details] = useState(() => new Animated.Value(revealPlayed ? 1 : 0));
@@ -151,7 +154,9 @@ export default function GoldHero({
           <Animated.View style={[styles.searchIcon, { transform: [{ scale: breathe }] }]}>
             <MaterialCommunityIcons name="fridge-outline" size={34} color="#FFFFFF" />
           </Animated.View>
-          <Text style={styles.searchText}>{"On regarde ce qu'il y a dans ton frigo…"}</Text>
+          <Text style={styles.searchText}>
+            {tr("On regarde ce qu'il y a dans ton frigo…", "Looking at what's in your fridge…")}
+          </Text>
         </View>
       )}
 
@@ -174,7 +179,7 @@ export default function GoldHero({
         </View>
 
         <Text style={styles.title} numberOfLines={3}>
-          {recipe.title}
+          {recipeTitle(recipe)}
         </Text>
         <Text style={styles.meta}>
           {[recipe.time, haveLabel(match)].filter(Boolean).join("  ·  ")}

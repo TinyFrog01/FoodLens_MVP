@@ -5,9 +5,11 @@ import { Dimensions, Image, ScrollView, StyleSheet, Text, View } from "react-nat
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getRecipePhoto } from "@/app/Food/data/recipe/photos";
+import LanguageSwitch from "@/components/LanguageSwitch";
 import { PrimaryButton, SecondaryButton, TextButton } from "@/components/account/Buttons";
 import { CardShadow, Palette, TextStyles } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
+import { tr, useLanguage } from "@/lib/i18n";
 
 const { width } = Dimensions.get("window");
 const TILE_WIDTH = (width - 40 - 20) / 3;
@@ -25,18 +27,23 @@ const BENEFITS: {
 }[] = [
   {
     icon: "shield-check-outline",
-    title: "Régimes et allergies",
-    text: "Les recettes à éviter disparaissent d'elles-mêmes.",
+    get title() { return tr("Régimes et allergies", "Diets and allergies"); },
+    get text() { return tr("Les recettes à éviter disparaissent d'elles-mêmes.", "Recipes to avoid disappear on their own."); },
   },
   {
     icon: "stove",
-    title: "Vos appareils",
-    text: "Seulement des recettes que vous pouvez faire chez vous.",
+    get title() { return tr("Vos appareils", "Your appliances"); },
+    get text() { return tr("Seulement des recettes que vous pouvez faire chez vous.", "Only recipes you can make at home."); },
   },
   {
     icon: "account-group-outline",
-    title: "Toute la famille",
-    text: "Choisissez pour qui vous cuisinez : les goûts de chacun comptent.",
+    get title() { return tr("Toute la famille", "The whole family"); },
+    get text() {
+      return tr(
+        "Choisissez pour qui vous cuisinez : les goûts de chacun comptent.",
+        "Choose who you're cooking for: everyone's tastes count."
+      );
+    },
   },
 ];
 
@@ -45,6 +52,7 @@ export default function Welcome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { continueAsGuest } = useAccount();
+  useLanguage(); // redessine l'écran quand la langue change
 
   return (
     <View style={styles.page}>
@@ -63,10 +71,16 @@ export default function Welcome() {
         </View>
 
         <View style={styles.body}>
-          <Text style={TextStyles.eyebrow}>FOODLENS</Text>
-          <Text style={styles.title}>Cuisinez avec ce que vous avez.</Text>
+          <View style={styles.brandRow}>
+            <Text style={TextStyles.eyebrow}>FOODLENS</Text>
+            <LanguageSwitch compact />
+          </View>
+          <Text style={styles.title}>{tr("Cuisinez avec ce que vous avez.", "Cook with what you have.")}</Text>
           <Text style={TextStyles.pageSubtitle}>
-            Des recettes adaptées à votre cuisine, à vos goûts et à toute la famille.
+            {tr(
+              "Des recettes adaptées à votre cuisine, à vos goûts et à toute la famille.",
+              "Recipes suited to your kitchen, your tastes and the whole family."
+            )}
           </Text>
 
           <View style={styles.benefits}>
@@ -87,15 +101,15 @@ export default function Welcome() {
 
       <View style={[styles.actions, { paddingBottom: insets.bottom + 12 }]}>
         <PrimaryButton
-          label="Créer un compte"
+          label={tr("Créer un compte", "Create an account")}
           onPress={() => router.push({ pathname: "/auth", params: { mode: "signup" } })}
         />
         <SecondaryButton
-          label="J'ai déjà un compte"
+          label={tr("J'ai déjà un compte", "I already have an account")}
           onPress={() => router.push({ pathname: "/auth", params: { mode: "login" } })}
         />
         <TextButton
-          label="Continuer en tant qu'invité"
+          label={tr("Continuer en tant qu'invité", "Continue as a guest")}
           color={Palette.muted}
           onPress={continueAsGuest}
         />
@@ -106,6 +120,7 @@ export default function Welcome() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: Palette.bg },
+  brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   mosaic: {
     flexDirection: "row",
     justifyContent: "space-between",

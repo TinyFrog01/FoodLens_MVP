@@ -17,6 +17,7 @@ import { PrimaryButton } from "@/components/account/Buttons";
 import TopBar from "@/components/account/TopBar";
 import { Palette, TextStyles } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
+import { useLanguage } from "@/lib/i18n";
 
 type Mode = "signup" | "login";
 type Errors = Partial<Record<"name" | "email" | "password" | "form", string>>;
@@ -42,15 +43,16 @@ export default function AuthScreen() {
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const isSignup = mode === "signup";
+  const { tr } = useLanguage();
 
   const validate = (): Errors => {
     const next: Errors = {};
-    if (isSignup && !name.trim()) next.name = "Entre ton prénom.";
-    if (!EMAIL_RE.test(email.trim())) next.email = "Entre un courriel valide.";
+    if (isSignup && !name.trim()) next.name = tr("Entre ton prénom.", "Enter your first name.");
+    if (!EMAIL_RE.test(email.trim())) next.email = tr("Entre un courriel valide.", "Enter a valid email.");
     if (isSignup && password.length < MIN_PASSWORD) {
-      next.password = `Au moins ${MIN_PASSWORD} caractères.`;
+      next.password = tr(`Au moins ${MIN_PASSWORD} caractères.`, `At least ${MIN_PASSWORD} characters.`);
     } else if (!password) {
-      next.password = "Entre ton mot de passe.";
+      next.password = tr("Entre ton mot de passe.", "Enter your password.");
     }
     return next;
   };
@@ -90,23 +92,31 @@ export default function AuthScreen() {
           contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={TextStyles.eyebrow}>{isSignup ? "CRÉER UN COMPTE" : "CONNEXION"}</Text>
+          <Text style={TextStyles.eyebrow}>
+            {isSignup ? tr("CRÉER UN COMPTE", "CREATE AN ACCOUNT") : tr("CONNEXION", "LOG IN")}
+          </Text>
           <Text style={TextStyles.pageTitle}>
-            {isSignup ? "Bienvenue !" : "Content de te revoir"}
+            {isSignup ? tr("Bienvenue !", "Welcome!") : tr("Content de te revoir", "Good to see you again")}
           </Text>
           <Text style={TextStyles.pageSubtitle}>
             {isSignup
-              ? "Ensuite, on configure ta cuisine en quelques étapes : appareils, régime, allergies et famille."
-              : "Retrouve tes préférences, ta famille et tes recettes favorites."}
+              ? tr(
+                  "Ensuite, on configure ta cuisine en quelques étapes : appareils, régime, allergies et famille.",
+                  "Next, we'll set up your kitchen in a few steps: appliances, diet, allergies and family."
+                )
+              : tr(
+                  "Retrouve tes préférences, ta famille et tes recettes favorites.",
+                  "Find your preferences, your family and your favorite recipes."
+                )}
           </Text>
 
           <View style={styles.form}>
             {isSignup && (
-              <Field label="Prénom" error={errors.name}>
+              <Field label={tr("Prénom", "First name")} error={errors.name}>
                 <TextInput
                   value={name}
                   onChangeText={setName}
-                  placeholder="Ex. Philippe"
+                  placeholder={tr("Ex. Philippe", "e.g. Philip")}
                   placeholderTextColor="#A6A6A0"
                   autoCapitalize="words"
                   autoComplete="given-name"
@@ -118,12 +128,12 @@ export default function AuthScreen() {
               </Field>
             )}
 
-            <Field label="Courriel" error={errors.email}>
+            <Field label={tr("Courriel", "Email")} error={errors.email}>
               <TextInput
                 ref={emailRef}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="toi@exemple.com"
+                placeholder={tr("toi@exemple.com", "you@example.com")}
                 placeholderTextColor="#A6A6A0"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -136,13 +146,17 @@ export default function AuthScreen() {
               />
             </Field>
 
-            <Field label="Mot de passe" error={errors.password}>
+            <Field label={tr("Mot de passe", "Password")} error={errors.password}>
               <View>
                 <TextInput
                   ref={passwordRef}
                   value={password}
                   onChangeText={setPassword}
-                  placeholder={isSignup ? `${MIN_PASSWORD} caractères minimum` : "Ton mot de passe"}
+                  placeholder={
+                    isSignup
+                      ? tr(`${MIN_PASSWORD} caractères minimum`, `${MIN_PASSWORD} characters minimum`)
+                      : tr("Ton mot de passe", "Your password")
+                  }
                   placeholderTextColor="#A6A6A0"
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
@@ -157,7 +171,9 @@ export default function AuthScreen() {
                   onPress={() => setShowPassword((v) => !v)}
                   style={styles.eye}
                   hitSlop={8}
-                  accessibilityLabel={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  accessibilityLabel={
+                    showPassword ? tr("Masquer le mot de passe", "Hide the password") : tr("Afficher le mot de passe", "Show the password")
+                  }
                 >
                   <Ionicons
                     name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -176,7 +192,7 @@ export default function AuthScreen() {
             ) : null}
 
             <PrimaryButton
-              label={isSignup ? "Créer mon compte" : "Se connecter"}
+              label={isSignup ? tr("Créer mon compte", "Create my account") : tr("Se connecter", "Log in")}
               onPress={submit}
               loading={busy}
               style={{ marginTop: 8 }}
@@ -184,9 +200,9 @@ export default function AuthScreen() {
 
             <Pressable onPress={switchMode} style={styles.switch} hitSlop={8}>
               <Text style={styles.switchText}>
-                {isSignup ? "Déjà un compte ? " : "Pas encore de compte ? "}
+                {isSignup ? tr("Déjà un compte ? ", "Already have an account? ") : tr("Pas encore de compte ? ", "No account yet? ")}
                 <Text style={styles.switchLink}>
-                  {isSignup ? "Se connecter" : "Créer un compte"}
+                  {isSignup ? tr("Se connecter", "Log in") : tr("Créer un compte", "Create an account")}
                 </Text>
               </Text>
             </Pressable>
@@ -195,8 +211,10 @@ export default function AuthScreen() {
           <View style={styles.note}>
             <Ionicons name="lock-closed-outline" size={15} color={Palette.muted} />
             <Text style={styles.noteText}>
-              Ton compte est enregistré sur cet appareil. Ton mot de passe n&apos;est
-              jamais conservé en clair.
+              {tr(
+                "Ton compte est enregistré sur cet appareil. Ton mot de passe n'est jamais conservé en clair.",
+                "Your account is saved on this device. Your password is never stored in plain text."
+              )}
             </Text>
           </View>
         </ScrollView>

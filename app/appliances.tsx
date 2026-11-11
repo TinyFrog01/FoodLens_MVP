@@ -7,6 +7,7 @@ import TopBar from "@/components/account/TopBar";
 import { APPLIANCES } from "@/constants/dietary";
 import { CardShadow, Palette, TextStyles } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
+import { useLanguage } from "@/lib/i18n";
 
 const { width } = Dimensions.get("window");
 const TILE_WIDTH = (width - 40 - 12) / 2;
@@ -15,6 +16,7 @@ const TILE_WIDTH = (width - 40 - 12) / 2;
 export default function AppliancesScreen() {
   const insets = useSafeAreaInsets();
   const { account, updateAccount } = useAccount();
+  const { tr } = useLanguage();
   if (!account) return null;
 
   return (
@@ -24,10 +26,10 @@ export default function AppliancesScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 30 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={TextStyles.eyebrow}>TES PRÉFÉRENCES</Text>
-        <Text style={TextStyles.pageTitle}>Tes appareils</Text>
+        <Text style={TextStyles.eyebrow}>{tr("TES PRÉFÉRENCES", "YOUR PREFERENCES")}</Text>
+        <Text style={TextStyles.pageTitle}>{tr("Tes appareils", "Your appliances")}</Text>
         <Text style={TextStyles.pageSubtitle}>
-          Coche ce que tu as dans ta cuisine.
+          {tr("Coche ce que tu as dans ta cuisine.", "Check what you have in your kitchen.")}
         </Text>
 
         <View style={styles.grid}>
@@ -55,10 +57,12 @@ export default function AppliancesScreen() {
 
         <View style={styles.switchCard}>
           <View style={{ flex: 1, marginRight: 12 }}>
-            <Text style={styles.switchTitle}>Afficher aussi les autres recettes</Text>
+            <Text style={styles.switchTitle}>{tr("Afficher aussi les autres recettes", "Show the other recipes too")}</Text>
             <Text style={TextStyles.sectionHint}>
-              Les recettes qui demandent un appareil que tu n&apos;as pas restent
-              visibles, avec une mention « Nécessite ».
+              {tr(
+                "Les recettes qui demandent un appareil que tu n'as pas restent visibles, avec une mention « Nécessite ».",
+                "Recipes that need an appliance you don't have stay visible, marked “Needs”."
+              )}
             </Text>
           </View>
           <Switch

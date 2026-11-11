@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { Palette } from "@/constants/theme";
+import { useLanguage } from "@/lib/i18n";
 
 const TONES = {
   green: { accent: Palette.green, soft: Palette.greenSoft },
@@ -25,6 +26,7 @@ export default function TagInput({
   tone?: keyof typeof TONES;
 }) {
   const [text, setText] = useState("");
+  const { tr } = useLanguage();
   const { accent, soft } = TONES[tone];
   const has = (v: string) => values.some((x) => x.toLowerCase() === v.toLowerCase());
 
@@ -47,7 +49,7 @@ export default function TagInput({
             <Pressable
               key={value}
               onPress={() => onChange(values.filter((v) => v !== value))}
-              accessibilityLabel={`Retirer ${value}`}
+              accessibilityLabel={tr(`Retirer ${value}`, `Remove ${value}`)}
               style={[styles.tag, { backgroundColor: soft, borderColor: accent }]}
             >
               <Text style={[styles.tagText, { color: accent }]}>{value}</Text>
@@ -72,7 +74,7 @@ export default function TagInput({
           onPress={() => add(text)}
           disabled={!text.trim()}
           style={[styles.addButton, !text.trim() && { opacity: 0.4 }]}
-          accessibilityLabel="Ajouter"
+          accessibilityLabel={tr("Ajouter", "Add")}
         >
           <Ionicons name="add" size={20} color="#FFFFFF" />
         </Pressable>

@@ -3,13 +3,15 @@ import { StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { useLanguage } from '@/lib/i18n';
 
 export default function NotFoundScreen() {
+  const { tr } = useLanguage();
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">This screen does not exist.</ThemedText>
+      <ThemedText type="title">{tr("Cette page n'existe pas.", 'This screen does not exist.')}</ThemedText>
       <Link href="/" style={styles.link}>
-        <ThemedText type="link">Go to home screen!</ThemedText>
+        <ThemedText type="link">{tr("Retour à l'accueil", 'Go to home screen!')}</ThemedText>
       </Link>
     </ThemedView>
   );

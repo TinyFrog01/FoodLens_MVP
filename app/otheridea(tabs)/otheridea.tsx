@@ -18,6 +18,7 @@ export default function Home() {
       <FlatList
         data={recipes}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingTop: 16 }}
         renderItem={({ item }) => (
           <RecipeCard
             recipe={item}

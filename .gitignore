@@ -41,5 +41,8 @@ scripts/wikibooks-recipes.json
 # output of npm run scrape:ricardo (regenerate it instead)
 scripts/ricardo-recipes.json
 scripts/ricardo-recipes.json.tmp
+scripts/ricardo-recipes-en.json
+scripts/ricardo-recipes-en.json.tmp
 
 app-example
+scripts/ricardo-english-todo.json

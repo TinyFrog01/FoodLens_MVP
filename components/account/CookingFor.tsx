@@ -12,19 +12,23 @@ import {
   getCookingFor,
   isSelf,
 } from "@/lib/account/recipeFilter";
+import { tr, useLanguage } from "@/lib/i18n";
 
 import Avatar from "./Avatar";
 import { PrimaryButton } from "./Buttons";
 
 export function cookingForLabel(names: { name: string; self: boolean }[]) {
-  if (names.length === 1) return names[0].self ? "Pour moi" : `Pour ${names[0].name}`;
-  return `Pour ${names.length} personnes`;
+  if (names.length === 1) {
+    return names[0].self ? tr("Pour moi", "For me") : tr(`Pour ${names[0].name}`, `For ${names[0].name}`);
+  }
+  return tr(`Pour ${names.length} personnes`, `For ${names.length} people`);
 }
 
 // Pilule « Pour 3 personnes ▾ » posée sur les photos du fil de recettes.
 export function CookingForPill({ onPress }: { onPress: () => void }) {
   const router = useRouter();
   const { account } = useAccount();
+  useLanguage();
 
   if (!account) {
     return (
@@ -33,7 +37,7 @@ export function CookingForPill({ onPress }: { onPress: () => void }) {
         style={({ pressed }) => [styles.pill, pressed && { opacity: 0.85 }]}
       >
         <Ionicons name="person-outline" size={15} color="#FFFFFF" />
-        <Text style={styles.pillText}>Invité · Crée ton compte</Text>
+        <Text style={styles.pillText}>{tr("Invité · Crée ton compte", "Guest · Create your account")}</Text>
       </Pressable>
     );
   }
@@ -43,7 +47,7 @@ export function CookingForPill({ onPress }: { onPress: () => void }) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel="Choisir pour qui je cuisine"
+      accessibilityLabel={tr("Choisir pour qui je cuisine", "Choose who I'm cooking for")}
       style={({ pressed }) => [styles.pill, pressed && { opacity: 0.85 }]}
     >
       <View style={styles.stack}>
@@ -72,6 +76,7 @@ export function CookingForSheet({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { account, setCookingFor } = useAccount();
+  useLanguage();
 
   if (!account) return null;
 
@@ -93,10 +98,12 @@ export function CookingForSheet({
 
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 18 }]}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Je cuisine pour</Text>
+          <Text style={styles.title}>{tr("Je cuisine pour", "I'm cooking for")}</Text>
           <Text style={styles.subtitle}>
-            Les recettes s&apos;adaptent aux régimes, aux allergies et aux goûts de
-            chaque personne choisie.
+            {tr(
+              "Les recettes s'adaptent aux régimes, aux allergies et aux goûts de chaque personne choisie.",
+              "Recipes adapt to the diets, allergies and tastes of each person you choose."
+            )}
           </Text>
 
           <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
@@ -114,7 +121,7 @@ export function CookingForSheet({
                   <View style={styles.rowText}>
                     <Text style={styles.rowName}>
                       {member.name}
-                      {isSelf(member) ? <Text style={styles.me}>  Moi</Text> : null}
+                      {isSelf(member) ? <Text style={styles.me}>{tr("  Moi", "  Me")}</Text> : null}
                     </Text>
                     <Text style={styles.rowSummary} numberOfLines={1}>
                       {describeMember(member)}
@@ -129,8 +136,10 @@ export function CookingForSheet({
           </ScrollView>
 
           <Text style={styles.count}>
-            {selected.length} personne{selected.length > 1 ? "s" : ""} · les portions de
-            chaque souper sont réglées d&apos;office
+            {tr(
+              `${selected.length} personne${selected.length > 1 ? "s" : ""} · les portions de chaque souper sont réglées d'office`,
+              `${selected.length} ${selected.length > 1 ? "people" : "person"} · each dinner's servings are set automatically`
+            )}
           </Text>
 
           <View style={styles.footer}>
@@ -143,9 +152,9 @@ export function CookingForSheet({
               style={styles.manage}
             >
               <Ionicons name="people-outline" size={18} color={Palette.green} />
-              <Text style={styles.manageText}>Gérer ta famille</Text>
+              <Text style={styles.manageText}>{tr("Gérer ta famille", "Manage your family")}</Text>
             </Pressable>
-            <PrimaryButton label="Terminé" onPress={onClose} style={{ flex: 1 }} />
+            <PrimaryButton label={tr("Terminé", "Done")} onPress={onClose} style={{ flex: 1 }} />
           </View>
         </View>
       </View>

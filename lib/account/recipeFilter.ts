@@ -7,8 +7,12 @@ import {
   dietLabel,
 } from "@/constants/dietary";
 import type { Recipe } from "@/app/Food/data/recipe/types";
+import { formatNames, tr } from "@/lib/i18n";
+import { englishIngredientNames, ingredientLabel } from "@/lib/recipeText";
 
 import { Account, Member, RecipeCustomization, SELF_ID } from "./types";
+
+export { formatNames };
 
 // ─────────────────────────────────────────────
 // Texte : « Oignons verts » doit correspondre à « oignon », « Œufs » à « oeuf ».
@@ -17,7 +21,7 @@ import { Account, Member, RecipeCustomization, SELF_ID } from "./types";
 // milliers de recettes, les redécouper à chaque fois figeait le fil.
 const wordsCache = new Map<string, string[]>();
 
-function normalizeWords(text: string): string[] {
+export function normalizeWords(text: string): string[] {
   let words = wordsCache.get(text);
   if (!words) {
     words = splitWords(text);
@@ -42,6 +46,8 @@ function splitWords(text: string): string[] {
 }
 
 // Vrai si les mots du terme apparaissent à la suite dans le nom de l'ingrédient.
+// Les goûts et allergies se tapent dans n'importe quelle langue : comparer aux
+// noms français et anglais (voir recipeNames).
 export function ingredientMatches(ingredientName: string, term: string) {
   const words = normalizeWords(ingredientName);
   const needle = normalizeWords(term);
@@ -142,7 +148,10 @@ export function evaluateRecipe(
   const allergenReasons: Extract<HideReason, { kind: "allergen" }>[] = [];
   const avoidReasons: Extract<HideReason, { kind: "avoid" }>[] = [];
   const dietReasons: Extract<HideReason, { kind: "diet" }>[] = [];
-  const names = recipe.ingredients.map((i) => i.name);
+  // Lus seulement si quelqu'un a des goûts ou des allergies à vérifier.
+  let names: string[] | null = null;
+  const has = (term: string) =>
+    (names ??= recipeNames(recipe)).some((n) => ingredientMatches(n, term));
 
   for (const person of people) {
     for (const allergen of person.allergens) {
@@ -156,7 +165,7 @@ export function evaluateRecipe(
       }
     }
     for (const term of person.avoid) {
-      if (names.some((n) => ingredientMatches(n, term))) {
+      if (has(term)) {
         addPerson(
           avoidReasons,
           (r) => r.term.toLowerCase() === term.toLowerCase(),
@@ -176,12 +185,12 @@ export function evaluateRecipe(
       }
     }
     for (const term of person.likes) {
-      if (names.some((n) => ingredientMatches(n, term))) {
+      if (has(term)) {
         verdict.likes.push({ person: person.name, term });
       }
     }
     for (const term of person.dislikes) {
-      if (names.some((n) => ingredientMatches(n, term))) {
+      if (has(term)) {
         verdict.dislikes.push({ person: person.name, term });
       }
     }
@@ -211,6 +220,14 @@ export type RecipeFeed = {
   people: Member[];
 };
 
+// Les noms des ingrédients en français et en anglais : « kiwi », « cilantro » et
+// « coriandre » doivent tous trouver leur recette, quelle que soit la langue de l'app.
+export function recipeNames(recipe: Recipe): string[] {
+  const french = recipe.ingredients.map((i) => i.name);
+  const english = englishIngredientNames(recipe) ?? [];
+  return english.length > 0 ? [...french, ...english] : french;
+}
+
 // Recettes visibles (aimées d'abord, détestées en dernier) et recettes masquées.
 export function buildFeed(recipes: Recipe[], account: Account | null): RecipeFeed {
   const people = account ? getCookingFor(account) : [];
@@ -229,23 +246,29 @@ export function buildFeed(recipes: Recipe[], account: Account | null): RecipeFee
 // ─────────────────────────────────────────────
 // Libellés
 // ─────────────────────────────────────────────
-export function formatNames(names: string[]) {
-  if (names.length <= 1) return names.join("");
-  return `${names.slice(0, -1).join(", ")} et ${names[names.length - 1]}`;
-}
-
 export function describeReason(reason: HideReason): string {
+  const people = formatNames(reason.kind === "appliance" || reason.kind === "time" ? [] : reason.people);
   switch (reason.kind) {
     case "allergen":
-      return `Contient : ${allergenLabel(reason.allergen)} (${formatNames(reason.people)})`;
+      return tr(
+        `Contient : ${allergenLabel(reason.allergen)} (${people})`,
+        `Contains: ${allergenLabel(reason.allergen)} (${people})`
+      );
     case "avoid":
-      return `Contient : ${reason.term} (${formatNames(reason.people)})`;
+      return tr(`Contient : ${reason.term} (${people})`, `Contains: ${reason.term} (${people})`);
     case "diet":
-      return `Ne convient pas au régime ${dietLabel(reason.diet).toLowerCase()} (${formatNames(reason.people)})`;
-    case "appliance":
-      return `Appareil manquant : ${reason.appliances.map(applianceLabel).join(", ")}`;
-    case "time":
-      return `Plus long que votre limite (${formatDuration(reason.minutes)} > ${formatDuration(reason.limit)})`;
+      return tr(
+        `Ne convient pas au régime ${dietLabel(reason.diet).toLowerCase()} (${people})`,
+        `Not ${dietLabel(reason.diet).toLowerCase()} (${people})`
+      );
+    case "appliance": {
+      const names = reason.appliances.map(applianceLabel).join(", ");
+      return tr(`Appareil manquant : ${names}`, `Missing appliance: ${names}`);
+    }
+    case "time": {
+      const times = `${formatDuration(reason.minutes)} > ${formatDuration(reason.limit)}`;
+      return tr(`Plus long que votre limite (${times})`, `Longer than your limit (${times})`);
+    }
   }
 }
 
@@ -253,20 +276,21 @@ export function formatDuration(minutes: number) {
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m ? `${h} h ${m}` : `${h} h`;
+  return m ? tr(`${h} h ${m}`, `${h} h ${m} min`) : `${h} h`;
 }
 
 // Résumé d'une personne : « Végétarien · Allergies : Arachides · N'aime pas : oignon »
 export function describeMember(member: Member) {
   const parts = member.diets.map(dietLabel);
-  const allergies = [...member.allergens.map(allergenLabel), ...member.avoid];
-  if (allergies.length > 0) {
-    parts.push(`Allergies : ${allergies.join(", ")}`);
+  const allergies = [...member.allergens.map(allergenLabel), ...member.avoid].join(", ");
+  if (allergies) {
+    parts.push(tr(`Allergies : ${allergies}`, `Allergies: ${allergies}`));
   }
   if (member.dislikes.length > 0) {
-    parts.push(`N'aime pas : ${member.dislikes.slice(0, 2).join(", ")}`);
+    const dislikes = member.dislikes.slice(0, 2).join(", ");
+    parts.push(tr(`N'aime pas : ${dislikes}`, `Dislikes: ${dislikes}`));
   }
-  return parts.length > 0 ? parts.join(" · ") : "Aucune restriction";
+  return parts.length > 0 ? parts.join(" · ") : tr("Aucune restriction", "No restrictions");
 }
 
 // Régimes à afficher sur une recette, sans redondance (végétalien implique
@@ -288,8 +312,15 @@ export function displayDiets(recipe: Recipe): string[] {
 // ─────────────────────────────────────────────
 // Recette personnalisée : ingrédients retirés / remplacés
 // ─────────────────────────────────────────────
+// `name` et `originalName` restent les noms français de la recette (frigo,
+// retraits et remplacements enregistrés) ; `label` et `originalLabel` sont ceux
+// à afficher, dans la langue choisie.
 export type PersonalIngredient = Recipe["ingredients"][number] & {
   originalName: string;
+  label: string;
+  originalLabel: string;
+  // Noms à comparer aux goûts et allergies (français, et anglais s'il existe).
+  matchNames: string[];
   removed: boolean;
   swapped: boolean;
 };
@@ -298,12 +329,17 @@ export function personalizeIngredients(
   recipe: Recipe,
   custom: RecipeCustomization | undefined
 ): PersonalIngredient[] {
-  return recipe.ingredients.map((ingredient) => {
+  const english = englishIngredientNames(recipe);
+  return recipe.ingredients.map((ingredient, index) => {
     const replacement = custom?.swaps?.[ingredient.name];
+    const originalLabel = ingredientLabel(recipe, index);
     return {
       ...ingredient,
       name: replacement ?? ingredient.name,
       originalName: ingredient.name,
+      label: replacement ?? originalLabel,
+      originalLabel,
+      matchNames: english?.[index] ? [ingredient.name, english[index]] : [ingredient.name],
       removed: custom?.removed?.includes(ingredient.name) ?? false,
       swapped: Boolean(replacement),
     };

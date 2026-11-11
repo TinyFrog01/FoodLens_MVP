@@ -22,8 +22,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getRecipePhoto } from "@/app/Food/data/recipe/photos";
 import type { Recipe } from "@/app/Food/data/recipe/types";
-import { staples } from "@/app/Food/data/staples";
-import { isIngredientOnHand } from "@/app/Food/data/utils/ingredients";
+import type { OnHandCheck } from "@/app/Food/data/utils/ingredients";
+import CategoryChips from "@/components/CategoryChips";
+import RecipeSearch from "@/components/RecipeSearch";
 import Scrim from "@/components/Scrim";
 import AvatarButton from "@/components/account/AvatarButton";
 import { CookingForPill, CookingForSheet } from "@/components/account/CookingFor";
@@ -31,12 +32,15 @@ import { useBottomTabOverflow } from "@/components/ui/TabBarBackground";
 import { applianceLabel } from "@/constants/dietary";
 import { Palette } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
-import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
 import { useLightStatusBar } from "@/hooks/useLightStatusBar";
+import { useOnHand } from "@/hooks/useOnHand";
 import { useRecipeFeed } from "@/hooks/useRecipeFeed";
 import { RecipeVerdict } from "@/lib/account/recipeFilter";
 import { confirmAction } from "@/lib/confirm";
 import { rankByFridge } from "@/lib/fridgeRanking";
+import { tr, useLanguage, type Language } from "@/lib/i18n";
+import { CATEGORIES, inCategory, type CategoryFilter } from "@/lib/recipeCategories";
+import { ingredientLabel, recipeSourceUrl, recipeTitle } from "@/lib/recipeText";
 
 // Deux touches plus rapprochées que ça : un « J'aime », comme sur TikTok. Une
 // seule touche ouvre la recette, une fois ce délai passé.
@@ -53,6 +57,8 @@ const INGREDIENT_CHIPS = 4;
 const RAIL_WIDTH = 72;
 // Le rail monte au-dessus du pouce, qui tient le téléphone en bas à droite.
 const RAIL_LIFT = 150;
+// Haut de la carte assombri sous la barre du haut (compte, recherche, rayons).
+const TOP_SCRIM = 190;
 const BURST_SIZE = 110;
 // La carte affichée : celle qui occupe plus de la moitié de l'écran.
 const VIEWABILITY = { itemVisiblePercentThreshold: 60 };
@@ -64,7 +70,7 @@ let swipeHintDone = false;
 /* ---------------- BADGE ---------------- */
 
 const getBadge = (missing: number) => {
-  if (missing <= 0) return { text: "Tous", color: "#18A64B" };
+  if (missing <= 0) return { text: tr("Tous", "All"), color: "#18A64B" };
   if (missing === 1) return { text: "1", color: "#F5C542" };
   if (missing === 2) return { text: "2", color: "#F59E0B" };
   if (missing === 3) return { text: "3", color: "#F97316" };
@@ -74,7 +80,7 @@ const getBadge = (missing: number) => {
 
 // Sous la pastille du rail : « Tous en main », « 1 manquant », « 3 manquants ».
 const badgeCaption = (missing: number) =>
-  missing <= 0 ? "en main" : missing === 1 ? "manquant" : "manquants";
+  missing <= 0 ? tr("en main", "on hand") : tr(missing === 1 ? "manquant" : "manquants", "missing");
 
 
 /* ---------------- CARD ---------------- */
@@ -92,7 +98,7 @@ const getFlags = (verdict: RecipeVerdict) => {
   verdict.dislikes.forEach(({ person, term }) =>
     flags.push({
       key: `dislike-${person}-${term}`,
-      text: `${person} n'aime pas : ${term}`,
+      text: tr(`${person} n'aime pas : ${term}`, `${person} dislikes: ${term}`),
       icon: "thumbs-down-outline",
       color: "rgba(217,119,6,0.92)",
     })
@@ -101,7 +107,10 @@ const getFlags = (verdict: RecipeVerdict) => {
   if (verdict.missingAppliances.length > 0) {
     flags.push({
       key: "appliance",
-      text: `Nécessite : ${verdict.missingAppliances.map(applianceLabel).join(", ")}`,
+      text: tr(
+        `Nécessite : ${verdict.missingAppliances.map(applianceLabel).join(", ")}`,
+        `Needs: ${verdict.missingAppliances.map(applianceLabel).join(", ")}`
+      ),
       icon: "alert-circle-outline",
       color: "rgba(0,0,0,0.6)",
     });
@@ -110,7 +119,7 @@ const getFlags = (verdict: RecipeVerdict) => {
   verdict.likes.forEach(({ person, term }) =>
     flags.push({
       key: `like-${person}-${term}`,
-      text: `${person} aime : ${term}`,
+      text: tr(`${person} aime : ${term}`, `${person} likes: ${term}`),
       icon: "heart",
       color: "rgba(24,166,75,0.92)",
     })
@@ -119,10 +128,13 @@ const getFlags = (verdict: RecipeVerdict) => {
   return flags.slice(0, 2);
 };
 
+// Le titre et la page de Ricardo dans la langue choisie.
 const shareRecipe = (recipe: Recipe) => {
+  const title = recipeTitle(recipe);
+  const url = recipeSourceUrl(recipe);
   Share.share({
-    title: recipe.title,
-    message: recipe.sourceUrl ? `${recipe.title}\n${recipe.sourceUrl}` : recipe.title,
+    title,
+    message: url ? `${title}\n${url}` : title,
   }).catch(() => {
     // partage annulé ou indisponible (web sans navigator.share)
   });
@@ -220,6 +232,10 @@ type CardProps = {
   liked: boolean;
   guest: boolean;
   reduceMotion: boolean;
+  // Pour redessiner la carte (mémoïsée) quand la langue change.
+  language: Language;
+  // Ce que tu as : essentiels activés et aliments confirmés sur tes photos.
+  isOnHand: OnHandCheck;
   onOpen: (id: string) => void;
   onToggleLike: (id: string) => void;
   onDoubleTapLike: (id: string) => void;
@@ -236,18 +252,18 @@ const RecipeCard = memo(function RecipeCard({
   liked,
   guest,
   reduceMotion,
+  language,
+  isOnHand,
   onOpen,
   onToggleLike,
   onDoubleTapLike,
   onShare,
 }: CardProps) {
   const item = verdict.recipe;
+  const title = recipeTitle(item, language);
   const flags = getFlags(verdict);
-  const { activeStaples } = useAlwaysOnHand();
 
-  const onHand = item.ingredients.map((ingredient) =>
-    isIngredientOnHand(ingredient.name, activeStaples)
-  );
+  const onHand = item.ingredients.map((ingredient) => isOnHand(ingredient));
   const missing = onHand.filter((have) => !have).length;
   const badge = getBadge(missing);
   const moreIngredients = item.ingredients.length - INGREDIENT_CHIPS;
@@ -363,7 +379,7 @@ const RecipeCard = memo(function RecipeCard({
         style={StyleSheet.absoluteFill}
         onPress={onPhotoPress}
         accessibilityRole="button"
-        accessibilityLabel={`Voir la recette : ${item.title}`}
+        accessibilityLabel={tr(`Voir la recette : ${title}`, `See the recipe: ${title}`)}
       >
         <Animated.Image
           source={getRecipePhoto(item.id, item.image)}
@@ -371,7 +387,7 @@ const RecipeCard = memo(function RecipeCard({
         />
       </Pressable>
 
-      <Scrim edge="top" height={topInset + 90} strength={0.4} />
+      <Scrim edge="top" height={topInset + TOP_SCRIM} strength={0.55} />
       <Scrim height="60%" strength={0.85} />
 
       {bursts.map((burst) => (
@@ -384,7 +400,7 @@ const RecipeCard = memo(function RecipeCard({
       <View style={[styles.caption, { paddingBottom: bottomInset + 16 }]}>
         <Pressable onPress={() => onOpen(item.id)} accessible={false}>
           <Text style={styles.title} numberOfLines={3}>
-            {item.title}
+            {title}
           </Text>
 
           {/* PERSONAL FLAGS */}
@@ -411,7 +427,7 @@ const RecipeCard = memo(function RecipeCard({
                 style={[styles.ingChip, onHand[i] ? styles.ingHave : styles.ingMissing]}
               >
                 <Text style={styles.ingText} numberOfLines={1}>
-                  {ingredient.name}
+                  {ingredientLabel(item, i, language)}
                 </Text>
               </View>
             ))}
@@ -424,7 +440,7 @@ const RecipeCard = memo(function RecipeCard({
         </Pressable>
 
         <TouchableOpacity style={styles.button} onPress={() => onOpen(item.id)}>
-          <Text style={styles.buttonText}>Voir la recette</Text>
+          <Text style={styles.buttonText}>{tr("Voir la recette", "See the recipe")}</Text>
           <Ionicons name="arrow-forward" size={18} color={Palette.ink} />
         </TouchableOpacity>
       </View>
@@ -434,8 +450,8 @@ const RecipeCard = memo(function RecipeCard({
 
       <View style={[styles.rail, { bottom: bottomInset + RAIL_LIFT }]}>
         <RailItem
-          label={liked ? "Favori" : "J'aime"}
-          accessibilityLabel={liked ? "Retirer des favoris" : "Ajouter aux favoris"}
+          label={liked ? tr("Favori", "Favorite") : tr("J'aime", "Like")}
+          accessibilityLabel={liked ? tr("Retirer des favoris", "Remove from favorites") : tr("Ajouter aux favoris", "Add to favorites")}
           onPress={onHeartPress}
         >
           <Animated.View style={{ transform: [{ scale: pop }] }}>
@@ -448,7 +464,7 @@ const RecipeCard = memo(function RecipeCard({
           </Animated.View>
         </RailItem>
 
-        <RailItem label={item.time} accessibilityLabel={`Temps : ${item.time}`}>
+        <RailItem label={item.time} accessibilityLabel={tr(`Temps : ${item.time}`, `Time: ${item.time}`)}>
           <Ionicons name="time" size={34} color="#FFFFFF" style={styles.railIcon} />
         </RailItem>
 
@@ -456,8 +472,11 @@ const RecipeCard = memo(function RecipeCard({
           label={badgeCaption(missing)}
           accessibilityLabel={
             missing <= 0
-              ? "Tu as tous les ingrédients"
-              : `${missing} ingrédient${missing > 1 ? "s" : ""} manquant${missing > 1 ? "s" : ""}`
+              ? tr("Tu as tous les ingrédients", "You have all the ingredients")
+              : tr(
+                  `${missing} ingrédient${missing > 1 ? "s" : ""} manquant${missing > 1 ? "s" : ""}`,
+                  `${missing} missing ingredient${missing > 1 ? "s" : ""}`
+                )
           }
         >
           <View style={[styles.badge, { backgroundColor: badge.color }]}>
@@ -465,7 +484,11 @@ const RecipeCard = memo(function RecipeCard({
           </View>
         </RailItem>
 
-        <RailItem label="Partager" accessibilityLabel="Partager la recette" onPress={() => onShare(item)}>
+        <RailItem
+          label={tr("Partager", "Share")}
+          accessibilityLabel={tr("Partager la recette", "Share the recipe")}
+          onPress={() => onShare(item)}
+        >
           <Ionicons name="arrow-redo" size={34} color="#FFFFFF" style={styles.railIcon} />
         </RailItem>
       </View>
@@ -479,6 +502,7 @@ const RecipeCard = memo(function RecipeCard({
 
 // Si on reste sur la première carte : une flèche qui invite à glisser.
 function SwipeHint({ reduceMotion }: { reduceMotion: boolean }) {
+  useLanguage();
   const [shown] = useState(() => new Animated.Value(0));
   const [bounce] = useState(() => new Animated.Value(0));
 
@@ -520,7 +544,7 @@ function SwipeHint({ reduceMotion }: { reduceMotion: boolean }) {
       <Animated.View style={{ transform: [{ translateY: lift }] }}>
         <Ionicons name="chevron-up" size={34} color="#FFFFFF" style={styles.railIcon} />
       </Animated.View>
-      <Text style={styles.hintText}>Glisse vers le haut</Text>
+      <Text style={styles.hintText}>{tr("Glisse vers le haut", "Swipe up")}</Text>
     </Animated.View>
   );
 }
@@ -534,18 +558,29 @@ export default function RecipeFeed() {
   // Hauteur de la barre d'onglets posée sur le fil (iOS), 0 ailleurs.
   const tabBarOverlap = useBottomTabOverflow();
   const { account, toggleFavorite, updateAccount } = useAccount();
+  const { language } = useLanguage();
 
   // Recettes filtrées pour les personnes choisies (tout, en mode invité)
   const { visible } = useRecipeFeed();
-  const { activeIds } = useAlwaysOnHand();
+  const { isOnHand } = useOnHand();
+
+  // Rayon choisi (Soupers, Desserts, Sauces…) : le fil ne montre que lui.
+  const [category, setCategory] = useState<CategoryFilter>("all");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   // Classées selon ce que tu as dans ton frigo
+  const ranked = useMemo(() => rankByFridge(visible, isOnHand), [visible, isOnHand]);
   const feed = useMemo(
-    () => rankByFridge(visible, staples.filter((s) => activeIds.includes(s.id))),
-    [visible, activeIds]
+    () =>
+      category === "all"
+        ? ranked
+        : rankByFridge(visible.filter((v) => inCategory(v.recipe, category)), isOnHand),
+    [ranked, visible, category, isOnHand]
   );
   const [sheetOpen, setSheetOpen] = useState(false);
   const isEmpty = visible.length === 0;
+  const categoryLabel = CATEGORIES.find((c) => c.key === category)?.label ?? "";
 
   // Une carte = tout l'écran au-dessus des onglets, mesuré plutôt que
   // Dimensions (qui compte aussi la barre d'onglets sur Android).
@@ -558,7 +593,7 @@ export default function RecipeFeed() {
   const signedIn = account !== null;
   const favorites = account?.favorites;
 
-  useLightStatusBar(!isEmpty);
+  useLightStatusBar(!isEmpty && !searchOpen);
 
   useFocusEffect(
     useCallback(() => {
@@ -621,16 +656,30 @@ export default function RecipeFeed() {
   const askForAccount = useCallback(
     () =>
       confirmAction({
-        title: "Crée ton compte gratuit",
-        message: "Tes recettes favorites seront enregistrées et faciles à retrouver.",
-        confirmLabel: "Créer mon compte",
-        cancelLabel: "Plus tard",
+        title: tr("Crée ton compte gratuit", "Create your free account"),
+        message: tr(
+          "Tes recettes favorites seront enregistrées et faciles à retrouver.",
+          "Your favorite recipes will be saved and easy to find."
+        ),
+        confirmLabel: tr("Créer mon compte", "Create my account"),
+        cancelLabel: tr("Plus tard", "Later"),
         onConfirm: () => router.push({ pathname: "/auth", params: { mode: "signup" } }),
       }),
     [router]
   );
 
   const openRecipe = useCallback((id: string) => router.push(`/recipe/${id}`), [router]);
+
+  // Nouveau rayon : on repart de sa première recette.
+  const chooseCategory = useCallback((next: CategoryFilter) => {
+    setCategory(next);
+    setActiveIndex(0);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false);
+    setQuery("");
+  }, []);
 
   const toggleLike = useCallback(
     (id: string) => (signedIn ? toggleFavorite(id) : askForAccount()),
@@ -656,10 +705,12 @@ export default function RecipeFeed() {
         height={page.height}
         topInset={insets.top}
         bottomInset={tabBarOverlap}
-        active={focused && index === activeIndex}
+        active={focused && !searchOpen && index === activeIndex}
         liked={favorites?.includes(item.recipe.id) ?? false}
         guest={!signedIn}
         reduceMotion={reduceMotion}
+        language={language}
+        isOnHand={isOnHand}
         onOpen={openRecipe}
         onToggleLike={toggleLike}
         onDoubleTapLike={likeOnce}
@@ -671,10 +722,13 @@ export default function RecipeFeed() {
       insets.top,
       tabBarOverlap,
       focused,
+      searchOpen,
       activeIndex,
       favorites,
       signedIn,
       reduceMotion,
+      language,
+      isOnHand,
       openRecipe,
       toggleLike,
       likeOnce,
@@ -686,7 +740,7 @@ export default function RecipeFeed() {
     [page.height]
   );
 
-  const showHint = hintPending && focused && activeIndex === 0 && feed.length > 1;
+  const showHint = hintPending && focused && !searchOpen && activeIndex === 0 && feed.length > 1;
 
   return (
     <View style={[styles.page, !isEmpty && styles.pageDark]} onLayout={onLayout}>
@@ -700,28 +754,50 @@ export default function RecipeFeed() {
             color="#BFBFBF"
           />
           <Text style={styles.emptyTitle}>
-            Aucune recette ne convient
+            {tr("Aucune recette ne convient", "No recipe fits")}
           </Text>
           <Text style={styles.emptyText}>
-            Les régimes, allergies, appareils ou le temps maximum des
-            personnes choisies masquent toutes les recettes.
+            {tr(
+              "Les régimes, allergies, appareils ou le temps maximum des personnes choisies masquent toutes les recettes.",
+              "The diets, allergies, appliances or time limit of the people you chose hide every recipe."
+            )}
           </Text>
           <TouchableOpacity
             style={styles.emptyButton}
             onPress={() => setSheetOpen(true)}
           >
             <Text style={styles.emptyButtonText}>
-              Changer pour qui je cuisine
+              {tr("Changer pour qui je cuisine", "Change who I'm cooking for")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/profile")}>
-            <Text style={styles.emptyLink}>Modifier mes préférences</Text>
+            <Text style={styles.emptyLink}>{tr("Modifier mes préférences", "Edit my preferences")}</Text>
+          </TouchableOpacity>
+        </View>
+
+      ) : feed.length === 0 ? (
+
+        <View style={styles.empty}>
+          <MaterialCommunityIcons name="food-off-outline" size={56} color="rgba(255,255,255,0.5)" />
+          <Text style={[styles.emptyTitle, styles.emptyTitleDark]}>
+            {tr(`Rien dans « ${categoryLabel} »`, `Nothing in “${categoryLabel}”`)}
+          </Text>
+          <Text style={[styles.emptyText, styles.emptyTextDark]}>
+            {tr(
+              "Les préférences des personnes choisies masquent toutes ces recettes.",
+              "The preferences of the people you chose hide all these recipes."
+            )}
+          </Text>
+          <TouchableOpacity style={styles.emptyButtonLight} onPress={() => chooseCategory("all")}>
+            <Text style={styles.emptyButtonLightText}>{tr("Voir toutes les recettes", "See all recipes")}</Text>
           </TouchableOpacity>
         </View>
 
       ) : page.height > 0 && (
 
         <FlatList
+          // Un rayon = un nouveau fil, qui repart du haut.
+          key={category}
           data={feed}
           keyExtractor={(item) => item.recipe.id}
           renderItem={renderItem}
@@ -746,15 +822,48 @@ export default function RecipeFeed() {
       {showHint && <SwipeHint reduceMotion={reduceMotion} />}
 
 
-      {/* TOP BAR : pour qui je cuisine + compte */}
+      {/* TOP BAR : pour qui je cuisine + compte, recherche, rayons */}
 
-      <View
-        style={[styles.topBar, { top: insets.top + 8 }]}
-        pointerEvents="box-none"
-      >
-        <CookingForPill onPress={() => setSheetOpen(true)} />
-        <AvatarButton onDark={!isEmpty} />
+      <View style={[styles.topArea, { top: insets.top + 8 }]} pointerEvents="box-none">
+        <View style={styles.topBar} pointerEvents="box-none">
+          <CookingForPill onPress={() => setSheetOpen(true)} />
+          <AvatarButton onDark={!isEmpty} />
+        </View>
+
+        {!isEmpty && (
+          <>
+            <Pressable
+              onPress={() => setSearchOpen(true)}
+              accessibilityRole="search"
+              accessibilityLabel={tr("Rechercher une recette ou un ingrédient", "Search for a recipe or an ingredient")}
+              style={({ pressed }) => [styles.searchBar, pressed && { opacity: 0.85 }]}
+            >
+              <Ionicons name="search" size={18} color="#FFFFFF" />
+              <Text style={styles.searchText} numberOfLines={1}>
+                {tr("Rechercher une recette, un ingrédient", "Search for a recipe, an ingredient")}
+              </Text>
+            </Pressable>
+
+            <View style={styles.categories}>
+              <CategoryChips value={category} onChange={chooseCategory} tone="dark" />
+            </View>
+          </>
+        )}
       </View>
+
+      {searchOpen && (
+        <RecipeSearch
+          query={query}
+          onChangeQuery={setQuery}
+          category={category}
+          onChangeCategory={chooseCategory}
+          verdicts={ranked}
+          isOnHand={isOnHand}
+          bottomInset={tabBarOverlap}
+          onOpenRecipe={openRecipe}
+          onClose={closeSearch}
+        />
+      )}
 
 
       {account && (
@@ -781,14 +890,28 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: Palette.bg },
   pageDark: { backgroundColor: Palette.ink },
 
+  topArea: { position: "absolute", left: 0, right: 0 },
   topBar: {
-    position: "absolute",
-    left: 16,
-    right: 16,
+    marginHorizontal: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    height: 42,
+    marginHorizontal: 16,
+    marginTop: 10,
+    paddingHorizontal: 14,
+    borderRadius: 21,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)",
+  },
+  searchText: { flex: 1, color: "rgba(255,255,255,0.9)", fontSize: 15, fontWeight: "600" },
+  categories: { marginTop: 10 },
 
   // ── Carte ──
   card: { backgroundColor: Palette.ink, overflow: "hidden" },
@@ -917,5 +1040,16 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
   emptyButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  // Rayon vide, sur le fond sombre du fil
+  emptyTitleDark: { color: "#FFFFFF" },
+  emptyTextDark: { color: "rgba(255,255,255,0.7)" },
+  emptyButtonLight: {
+    marginTop: 24,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 14,
+    paddingHorizontal: 26,
+    borderRadius: 30,
+  },
+  emptyButtonLightText: { color: Palette.ink, fontSize: 16, fontWeight: "800" },
   emptyLink: { marginTop: 16, color: "#3E9C5C", fontSize: 15, fontWeight: "700" },
 });

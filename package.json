@@ -13,6 +13,7 @@
     "scrape:recipes": "node scripts/scrape-wikibooks-recipes.js",
     "convert:recipes": "node scripts/convert-wikibooks-recipes.js",
     "scrape:ricardo": "node scripts/scrape-ricardo-recipes.js",
+    "scrape:ricardo:en": "node scripts/scrape-ricardo-english.js",
     "convert:ricardo": "node scripts/convert-ricardo-recipes.js"
   },
   "dependencies": {

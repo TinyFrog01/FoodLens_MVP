@@ -12,30 +12,49 @@ import { CardShadow, Palette, TextStyles } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
 import { useRecipeFeed } from "@/hooks/useRecipeFeed";
 import { describeReason } from "@/lib/account/recipeFilter";
+import { tr, useLanguage } from "@/lib/i18n";
+import { recipeTitle } from "@/lib/recipeText";
 
 type Tab = "favorites" | "custom" | "hidden";
 
 const TABS: { key: Tab; label: string; title: string }[] = [
-  { key: "favorites", label: "Favoris", title: "Tes favoris" },
-  { key: "custom", label: "Tes versions", title: "Tes versions" },
-  { key: "hidden", label: "Masquées", title: "Recettes masquées" },
+  {
+    key: "favorites",
+    get label() { return tr("Favoris", "Favorites"); },
+    get title() { return tr("Tes favoris", "Your favorites"); },
+  },
+  {
+    key: "custom",
+    get label() { return tr("Tes versions", "Your versions"); },
+    get title() { return tr("Tes versions", "Your versions"); },
+  },
+  {
+    key: "hidden",
+    get label() { return tr("Masquées", "Hidden"); },
+    get title() { return tr("Recettes masquées", "Hidden recipes"); },
+  },
 ];
 
 const EMPTY: Record<Tab, { icon: keyof typeof Ionicons.glyphMap; title: string; text: string }> = {
   favorites: {
     icon: "heart-outline",
-    title: "Aucun favori",
-    text: "Touche le cœur sur une recette pour la retrouver ici.",
+    get title() { return tr("Aucun favori", "No favorites"); },
+    get text() { return tr("Touche le cœur sur une recette pour la retrouver ici.", "Tap the heart on a recipe to find it here."); },
   },
   custom: {
     icon: "create-outline",
-    title: "Pas encore de version à toi",
-    text: "Sur une recette, touche « Faire ta version » ou ajoute une note.",
+    get title() { return tr("Pas encore de version à toi", "No version of your own yet"); },
+    get text() {
+      return tr(
+        "Sur une recette, touche « Faire ta version » ou ajoute une note.",
+        "On a recipe, tap “Make your version” or add a note."
+      );
+    },
   },
   hidden: {
     icon: "eye-outline",
-    title: "Aucune recette masquée",
-    text: "Toutes les recettes conviennent aux personnes choisies.",
+    get title() { return tr("Aucune recette masquée", "No hidden recipes"); },
+    get text() { return tr("Toutes les recettes conviennent aux personnes choisies.", "Every recipe suits the people you chose."); },
   },
 };
 
@@ -47,6 +66,7 @@ export default function MyRecipes() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const { account } = useAccount();
   const { hidden } = useRecipeFeed();
+  useLanguage(); // redessine l'écran quand la langue change
   const [tab, setTab] = useState<Tab>(
     TABS.some((t) => t.key === params.tab) ? (params.tab as Tab) : "favorites"
   );
@@ -66,9 +86,14 @@ export default function MyRecipes() {
       if (!recipe) return [];
       const changes = (custom.removed?.length ?? 0) + Object.keys(custom.swaps ?? {}).length;
       const parts = [
-        custom.note?.trim() ? `« ${custom.note.trim()} »` : null,
-        changes > 0 ? `${changes} ingrédient${changes > 1 ? "s" : ""} modifié${changes > 1 ? "s" : ""}` : null,
-        custom.servings ? `${custom.servings} portions` : null,
+        custom.note?.trim() ? tr(`« ${custom.note.trim()} »`, `“${custom.note.trim()}”`) : null,
+        changes > 0
+          ? tr(
+              `${changes} ingrédient${changes > 1 ? "s" : ""} modifié${changes > 1 ? "s" : ""}`,
+              `${changes} ingredient${changes > 1 ? "s" : ""} changed`
+            )
+          : null,
+        custom.servings ? tr(`${custom.servings} portions`, `${custom.servings} servings`) : null,
       ].filter(Boolean);
       return [{ recipe, detail: parts.join(" · "), tone: "muted" as const }];
     });
@@ -84,11 +109,14 @@ export default function MyRecipes() {
     <View style={styles.page}>
       <TopBar />
       <View style={styles.header}>
-        <Text style={TextStyles.eyebrow}>TES RECETTES</Text>
+        <Text style={TextStyles.eyebrow}>{tr("TES RECETTES", "YOUR RECIPES")}</Text>
         <Text style={TextStyles.pageTitle}>{TABS.find((t) => t.key === tab)?.title}</Text>
         {tab === "hidden" && (
           <Text style={TextStyles.pageSubtitle}>
-            Masquées pour les personnes pour qui tu cuisines en ce moment.
+            {tr(
+              "Masquées pour les personnes pour qui tu cuisines en ce moment.",
+              "Hidden for the people you're cooking for right now."
+            )}
           </Text>
         )}
 
@@ -126,7 +154,7 @@ export default function MyRecipes() {
             <Image source={getRecipePhoto(item.recipe.id, item.recipe.image)} style={styles.thumb} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={styles.title} numberOfLines={2}>
-                {item.recipe.title}
+                {recipeTitle(item.recipe)}
               </Text>
               {item.detail ? (
                 <Text

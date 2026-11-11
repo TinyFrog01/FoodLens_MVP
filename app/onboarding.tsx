@@ -12,32 +12,53 @@ import TagInput from "@/components/account/TagInput";
 import {
   ALLERGENS,
   APPLIANCES,
-  AVOID_SUGGESTIONS,
+  avoidSuggestions,
   DIETS,
 } from "@/constants/dietary";
 import { CardShadow, Palette, TextStyles } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
 import { describeMember } from "@/lib/account/recipeFilter";
+import { tr, useLanguage } from "@/lib/i18n";
 
 const { width } = Dimensions.get("window");
 const TILE_WIDTH = (width - 40 - 12) / 2;
 
 const STEPS = [
   {
-    title: "Tes appareils",
-    subtitle: "On te proposera seulement des recettes réalisables dans ta cuisine.",
+    get title() { return tr("Tes appareils", "Your appliances"); },
+    get subtitle() {
+      return tr(
+        "On te proposera seulement des recettes réalisables dans ta cuisine.",
+        "We'll only suggest recipes you can make in your kitchen."
+      );
+    },
   },
   {
-    title: "Ton régime",
-    subtitle: "Les recettes qui ne conviennent pas sont retirées. Aucun choix = tout est proposé.",
+    get title() { return tr("Ton régime", "Your diet"); },
+    get subtitle() {
+      return tr(
+        "Les recettes qui ne conviennent pas sont retirées. Aucun choix = tout est proposé.",
+        "Recipes that don't fit are removed. No choice = everything is suggested."
+      );
+    },
   },
   {
-    title: "Allergies et intolérances",
-    subtitle: "Les recettes qui contiennent ces aliments n'apparaîtront plus du tout.",
+    get title() { return tr("Allergies et intolérances", "Allergies and intolerances"); },
+    get subtitle() {
+      return tr(
+        "Les recettes qui contiennent ces aliments n'apparaîtront plus du tout.",
+        "Recipes that contain these foods won't show up at all."
+      );
+    },
   },
   {
-    title: "Pour qui cuisines-tu ?",
-    subtitle: "Ajoute les membres de ta famille, leurs goûts et ce qu'ils n'aiment pas.",
+    get title() { return tr("Pour qui cuisines-tu ?", "Who do you cook for?"); },
+    get subtitle() {
+      return tr(
+        "Ajoute les membres de ta famille, leurs goûts et ce qu'ils n'aiment pas.",
+        "Add your family members, their tastes and what they dislike."
+      );
+    },
   },
 ];
 
@@ -51,6 +72,7 @@ export default function Onboarding() {
   const insets = useSafeAreaInsets();
   const { account, updateAccount, saveMember, completeOnboarding } = useAccount();
   const [step, setStep] = useState(0);
+  useLanguage(); // redessine l'écran quand la langue change
 
   if (!account) return null;
   const self = account.self;
@@ -65,7 +87,7 @@ export default function Onboarding() {
             <View key={i} style={[styles.segment, i <= step && styles.segmentOn]} />
           ))}
         </View>
-        <TextButton label={isLast ? "Plus tard" : "Passer"} color={Palette.muted} onPress={next} />
+        <TextButton label={isLast ? tr("Plus tard", "Later") : tr("Passer", "Skip")} color={Palette.muted} onPress={next} />
       </View>
 
       <ScrollView
@@ -75,10 +97,10 @@ export default function Onboarding() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={TextStyles.eyebrow}>
-          ÉTAPE {step + 1} SUR {STEPS.length}
+          {tr(`ÉTAPE ${step + 1} SUR ${STEPS.length}`, `STEP ${step + 1} OF ${STEPS.length}`)}
         </Text>
         <Text style={styles.title}>
-          {step === 0 ? `Bonjour ${self.name} !\n` : ""}
+          {step === 0 ? tr(`Bonjour ${self.name} !\n`, `Hello ${self.name}!\n`) : ""}
           {STEPS[step].title}
         </Text>
         <Text style={TextStyles.pageSubtitle}>{STEPS[step].subtitle}</Text>
@@ -118,7 +140,7 @@ export default function Onboarding() {
 
         {step === 2 && (
           <View style={styles.card}>
-            <Text style={TextStyles.sectionTitle}>Allergènes</Text>
+            <Text style={TextStyles.sectionTitle}>{tr("Allergènes", "Allergens")}</Text>
             <View style={styles.chips}>
               {ALLERGENS.map((a) => (
                 <ChoiceChip
@@ -131,15 +153,17 @@ export default function Onboarding() {
               ))}
             </View>
 
-            <Text style={[TextStyles.sectionTitle, { marginTop: 18 }]}>Autres aliments à éviter</Text>
+            <Text style={[TextStyles.sectionTitle, { marginTop: 18 }]}>
+              {tr("Autres aliments à éviter", "Other foods to avoid")}
+            </Text>
             <Text style={[TextStyles.sectionHint, { marginBottom: 10 }]}>
-              Une intolérance qui n&apos;est pas dans la liste ? Ajoute-la ici.
+              {tr("Une intolérance qui n'est pas dans la liste ? Ajoute-la ici.", "An intolerance that isn't on the list? Add it here.")}
             </Text>
             <TagInput
               values={self.avoid}
               onChange={(avoid) => saveMember({ ...self, avoid })}
-              placeholder="Ex. kiwi, fraise…"
-              suggestions={AVOID_SUGGESTIONS}
+              placeholder={tr("Ex. kiwi, fraise…", "e.g. kiwi, strawberry…")}
+              suggestions={avoidSuggestions()}
               tone="danger"
             />
           </View>
@@ -158,7 +182,7 @@ export default function Onboarding() {
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.memberName}>
                       {m.name}
-                      {m.id === self.id ? <Text style={styles.me}>  Moi</Text> : null}
+                      {m.id === self.id ? <Text style={styles.me}>{tr("  Moi", "  Me")}</Text> : null}
                     </Text>
                     <Text style={styles.memberSummary} numberOfLines={1}>
                       {describeMember(m)}
@@ -174,12 +198,14 @@ export default function Onboarding() {
               style={({ pressed }) => [styles.addMember, pressed && { opacity: 0.8 }]}
             >
               <Ionicons name="add" size={22} color={Palette.green} />
-              <Text style={styles.addMemberText}>Ajouter un membre de la famille</Text>
+              <Text style={styles.addMemberText}>{tr("Ajouter un membre de la famille", "Add a family member")}</Text>
             </Pressable>
 
             <Text style={[TextStyles.sectionHint, { marginTop: 14 }]}>
-              Touche une personne pour indiquer ce qu&apos;elle aime ou n&apos;aime pas. À
-              chaque repas, tu pourras choisir pour qui tu cuisines.
+              {tr(
+                "Touche une personne pour indiquer ce qu'elle aime ou n'aime pas. À chaque repas, tu pourras choisir pour qui tu cuisines.",
+                "Tap a person to say what they like or dislike. At each meal, you can choose who you're cooking for."
+              )}
             </Text>
           </View>
         )}
@@ -187,10 +213,10 @@ export default function Onboarding() {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         {step > 0 && (
-          <SecondaryButton label="Retour" onPress={() => setStep(step - 1)} style={{ flex: 1 }} />
+          <SecondaryButton label={tr("Retour", "Back")} onPress={() => setStep(step - 1)} style={{ flex: 1 }} />
         )}
         <PrimaryButton
-          label={isLast ? "C'est parti !" : "Continuer"}
+          label={isLast ? tr("C'est parti !", "Let's go!") : tr("Continuer", "Continue")}
           onPress={next}
           style={{ flex: 2 }}
         />

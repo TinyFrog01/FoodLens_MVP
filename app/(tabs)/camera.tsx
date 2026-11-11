@@ -22,6 +22,7 @@ import {
 } from "react-native";
 
 import { useLightStatusBar } from "@/hooks/useLightStatusBar";
+import { getLanguage, tr, useLanguage } from "@/lib/i18n";
 import {
   countItems,
   describeItems,
@@ -32,6 +33,7 @@ import {
 import {
   CATEGORY_LABELS,
   categoryOf,
+  formatPhotoDate,
   saveDetectionResult,
   startAnalysis,
   StoredPhoto,
@@ -48,10 +50,10 @@ const CATEGORIES: {
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
 }[] = [
-  { key: "fridge", label: "Frigo", icon: "fridge-outline" },
-  { key: "freezer", label: "Congélateur", icon: "snowflake" },
-  { key: "pantry", label: "Garde-manger", icon: "food-variant" },
-  { key: "counter", label: "Comptoir", icon: "countertop-outline" },
+  { key: "fridge", get label() { return tr("Frigo", "Fridge"); }, icon: "fridge-outline" },
+  { key: "freezer", get label() { return tr("Congélateur", "Freezer"); }, icon: "snowflake" },
+  { key: "pantry", get label() { return tr("Garde-manger", "Pantry"); }, icon: "food-variant" },
+  { key: "counter", get label() { return tr("Comptoir", "Counter"); }, icon: "countertop-outline" },
 ];
 
 // ✅ Une photo prise pendant la session en cours, pas encore enregistrée.
@@ -69,9 +71,9 @@ type Shot = {
 const generateId = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-// Règle française : « 0 photo », « 1 photo », « 2 photos ».
+// « 0 photo », « 1 photo », « 2 photos » en français ; « 0 photos » en anglais.
 const pluralize = (count: number, word: string) =>
-  `${count} ${word}${count > 1 ? "s" : ""}`;
+  `${count} ${word}${count > 1 || (count === 0 && getLanguage() === "en") ? "s" : ""}`;
 
 // ✅ Petit retour haptique à chaque photo / choix (non disponible sur web).
 const haptic = () => {
@@ -82,8 +84,14 @@ const haptic = () => {
 
 // ✅ Alert.alert ne fait rien sur web : on passe par window.confirm.
 const confirmDiscard = (count: number, onDiscard: () => void) => {
-  const title = `Supprimer ${count > 1 ? `ces ${count} photos` : "cette photo"} ?`;
-  const message = count > 1 ? "Elles ne sont pas encore enregistrées." : "Elle n'est pas encore enregistrée.";
+  const title =
+    count > 1
+      ? tr(`Supprimer ces ${count} photos ?`, `Delete these ${count} photos?`)
+      : tr("Supprimer cette photo ?", "Delete this photo?");
+  const message =
+    count > 1
+      ? tr("Elles ne sont pas encore enregistrées.", "They aren't saved yet.")
+      : tr("Elle n'est pas encore enregistrée.", "It isn't saved yet.");
 
   if (Platform.OS === "web") {
     if (window.confirm(`${title}\n${message}`)) onDiscard();
@@ -91,8 +99,8 @@ const confirmDiscard = (count: number, onDiscard: () => void) => {
   }
 
   Alert.alert(title, message, [
-    { text: "Garder", style: "cancel" },
-    { text: "Supprimer", style: "destructive", onPress: onDiscard },
+    { text: tr("Garder", "Keep"), style: "cancel" },
+    { text: tr("Supprimer", "Delete"), style: "destructive", onPress: onDiscard },
   ]);
 };
 
@@ -105,11 +113,12 @@ const DetectionSummary = ({
   shot: Shot;
   onRetry: () => void;
 }) => {
+  useLanguage();
   if (shot.detection === "pending") {
     return (
       <View style={styles.detectionRow}>
         <ActivityIndicator size="small" color={GREEN} />
-        <Text style={styles.detectionText}>Recherche des ingrédients…</Text>
+        <Text style={styles.detectionText}>{tr("Recherche des ingrédients…", "Looking for ingredients…")}</Text>
       </View>
     );
   }
@@ -119,10 +128,10 @@ const DetectionSummary = ({
       <View style={styles.detectionRow}>
         <Ionicons name="warning-outline" size={16} color={WARN} />
         <Text style={styles.detectionText} numberOfLines={2}>
-          {shot.detectionError ?? "Impossible d'analyser cette photo."}
+          {shot.detectionError ?? tr("Impossible d'analyser cette photo.", "Couldn't analyze this photo.")}
         </Text>
         <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-          <Text style={styles.retryButtonText}>Réessayer</Text>
+          <Text style={styles.retryButtonText}>{tr("Réessayer", "Try again")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -132,7 +141,7 @@ const DetectionSummary = ({
   if (items.length === 0) {
     return (
       <View style={styles.detectionRow}>
-        <Text style={styles.detectionText}>Aucun ingrédient trouvé</Text>
+        <Text style={styles.detectionText}>{tr("Aucun ingrédient trouvé", "No ingredients found")}</Text>
       </View>
     );
   }
@@ -142,8 +151,8 @@ const DetectionSummary = ({
   return (
     <View style={styles.detectionResult}>
       <Text style={styles.detectionText}>
-        {pluralize(items.length, "ingrédient")}
-        {needCheck > 0 ? ` · ${needCheck} à vérifier` : ""}
+        {pluralize(items.length, tr("ingrédient", "ingredient"))}
+        {needCheck > 0 ? tr(` · ${needCheck} à vérifier`, ` · ${needCheck} to check`) : ""}
       </Text>
 
       <View style={styles.ingredientChips}>
@@ -173,6 +182,7 @@ const DetectionSummary = ({
 export default function Camera() {
   const router = useRouter();
   useLightStatusBar();
+  useLanguage(); // redessine l'écran quand la langue change
 
   // ✅ catégorie passée par le "+" d'une section (ex: /camera?category=fridge)
   // ✅ editId passé par le bouton "redo" d'une photo existante
@@ -307,14 +317,14 @@ export default function Camera() {
     return (
       <View style={styles.permissionContainer}>
         <Text style={styles.permissionText}>
-          FoodLens a besoin de ta caméra pour scanner ton frigo.
+          {tr("FoodLens a besoin de ta caméra pour scanner ton frigo.", "FoodLens needs your camera to scan your fridge.")}
         </Text>
 
         <TouchableOpacity
           style={styles.permissionButton}
           onPress={requestPermission}
         >
-          <Text style={styles.permissionButtonText}>Autoriser la caméra</Text>
+          <Text style={styles.permissionButtonText}>{tr("Autoriser la caméra", "Allow the camera")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -452,12 +462,8 @@ export default function Camera() {
     if (!canSave) return;
     setSaving(true);
 
-    const dateLabel = new Date().toLocaleString("fr-CA", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    const now = new Date();
+    const dateLabel = formatPhotoDate(now);
 
     // Résultat de l'analyse s'il est déjà là, sinon "pending" : il sera
     // ajouté à la photo enregistrée dès que l'API aura répondu.
@@ -466,6 +472,7 @@ export default function Camera() {
       uri: shot.uri,
       category: shot.category ?? undefined,
       date: dateLabel,
+      takenAt: now.toISOString(),
       detection: shot.detection,
       items: shot.items,
       detectionError: shot.detectionError,
@@ -508,7 +515,7 @@ export default function Camera() {
       // On garde les photos à l'écran pour que l'utilisateur puisse réessayer.
       console.error(err);
       setSaving(false);
-      Alert.alert("Impossible d'enregistrer tes photos", "Réessaie.");
+      Alert.alert(tr("Impossible d'enregistrer tes photos", "Couldn't save your photos"), tr("Réessaie.", "Try again."));
       return;
     }
 
@@ -531,13 +538,17 @@ export default function Camera() {
   // ============================
 
   if (step === "sort") {
-    let saveLabel = `Enregistrer ${pluralize(shots.length, "photo")}`;
+    const photos = (count: number) => pluralize(count, "photo");
+    let saveLabel = tr(`Enregistrer ${photos(shots.length)}`, `Save ${photos(shots.length)}`);
     if (unsortedCount > 0) {
-      saveLabel = `Range encore ${pluralize(unsortedCount, "photo")}`;
+      saveLabel = tr(`Range encore ${photos(unsortedCount)}`, `Sort ${photos(unsortedCount)} more`);
     } else if (isRedo) {
-      saveLabel = "Remplacer la photo";
+      saveLabel = tr("Remplacer la photo", "Replace the photo");
     } else if (replaceLabel) {
-      saveLabel = `Remplacer ${replaceLabel} par ${pluralize(shots.length, "photo")}`;
+      saveLabel = tr(
+        `Remplacer ${replaceLabel} par ${photos(shots.length)}`,
+        `Replace ${replaceLabel} with ${photos(shots.length)}`
+      );
     }
 
     return (
@@ -546,19 +557,19 @@ export default function Camera() {
           <TouchableOpacity
             style={styles.sortBackButton}
             onPress={handleBackToCamera}
-            accessibilityLabel={isRedo ? "Reprendre la photo" : "Retour à la caméra"}
+            accessibilityLabel={isRedo ? tr("Reprendre la photo", "Retake the photo") : tr("Retour à la caméra", "Back to the camera")}
           >
             <Ionicons name="chevron-back" size={22} color="#1C1C1A" />
           </TouchableOpacity>
 
           <View style={styles.sortTitleWrap}>
             <Text style={styles.sortTitle}>
-              {isRedo ? "Remplacer la photo" : "Où ranger chaque photo ?"}
+              {isRedo ? tr("Remplacer la photo", "Replace the photo") : tr("Où ranger chaque photo ?", "Where does each photo go?")}
             </Text>
             <Text style={styles.sortSubtitle}>
               {unsortedCount > 0
-                ? `${pluralize(unsortedCount, "photo")} à ranger`
-                : "Tout est rangé, prêt à enregistrer"}
+                ? tr(`${pluralize(unsortedCount, "photo")} à ranger`, `${pluralize(unsortedCount, "photo")} to sort`)
+                : tr("Tout est rangé, prêt à enregistrer", "All sorted, ready to save")}
             </Text>
           </View>
         </View>
@@ -566,7 +577,7 @@ export default function Camera() {
         {/* ✅ Raccourci : tout ranger au même endroit en un tap */}
         {shots.length > 1 && (
           <View style={styles.bulkRow}>
-            <Text style={styles.bulkLabel}>TOUT RANGER DANS</Text>
+            <Text style={styles.bulkLabel}>{tr("TOUT RANGER DANS", "PUT EVERYTHING IN")}</Text>
             <View style={styles.bulkChips}>
               {CATEGORIES.map((c) => {
                 const allHere = shots.every((s) => s.category === c.key);
@@ -622,7 +633,7 @@ export default function Camera() {
                         style={styles.shotRemove}
                         onPress={() => removeShot(shot.id)}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        accessibilityLabel={`Retirer la photo ${index + 1}`}
+                        accessibilityLabel={tr(`Retirer la photo ${index + 1}`, `Remove photo ${index + 1}`)}
                       >
                         <Ionicons name="close" size={14} color="white" />
                       </TouchableOpacity>
@@ -677,7 +688,7 @@ export default function Camera() {
               onPress={() => setStep("camera")}
             >
               <Ionicons name="camera-outline" size={20} color="#999" />
-              <Text style={styles.addMoreText}>Prendre d&apos;autres photos</Text>
+              <Text style={styles.addMoreText}>{tr("Prendre d'autres photos", "Take more photos")}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -688,7 +699,7 @@ export default function Camera() {
               style={styles.retakeButton}
               onPress={handleBackToCamera}
             >
-              <Text style={styles.retakeButtonText}>Reprendre</Text>
+              <Text style={styles.retakeButtonText}>{tr("Reprendre", "Retake")}</Text>
             </TouchableOpacity>
           )}
 
@@ -708,13 +719,13 @@ export default function Camera() {
   // CAMERA (rafale)
   // ============================
 
-  let hint = "Prends-en autant que tu veux, tu les rangeras ensuite";
+  let hint = tr("Prends-en autant que tu veux, tu les rangeras ensuite", "Take as many as you like, you'll sort them afterwards");
   if (isRedo) {
-    hint = "Reprends cette photo";
+    hint = tr("Reprends cette photo", "Retake this photo");
   } else if (replaceLabel) {
-    hint = `Ces photos remplaceront toutes celles de : ${replaceLabel}`;
+    hint = tr(`Ces photos remplaceront toutes celles de : ${replaceLabel}`, `These photos will replace all those in: ${replaceLabel}`);
   } else if (activeCategoryConfig) {
-    hint = `Les photos vont directement dans : ${activeCategoryConfig.label}`;
+    hint = tr(`Les photos vont directement dans : ${activeCategoryConfig.label}`, `Photos go straight into: ${activeCategoryConfig.label}`);
   }
 
   return (
@@ -730,7 +741,7 @@ export default function Camera() {
       {/* ---------- TOP BLACK BAR ---------- */}
 
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={handleClose} accessibilityLabel="Fermer">
+        <TouchableOpacity onPress={handleClose} accessibilityLabel={tr("Fermer", "Close")}>
           <AntDesign name="close" size={25} color="white" />
         </TouchableOpacity>
 
@@ -803,7 +814,7 @@ export default function Camera() {
                     style={styles.trayRemove}
                     onPress={() => removeShot(shot.id)}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    accessibilityLabel={`Retirer la photo ${index + 1}`}
+                    accessibilityLabel={tr(`Retirer la photo ${index + 1}`, `Remove photo ${index + 1}`)}
                   >
                     <Ionicons name="close" size={12} color="white" />
                   </TouchableOpacity>
@@ -844,7 +855,7 @@ export default function Camera() {
         <TouchableOpacity
           style={styles.sideSlot}
           onPress={toggleCameraFacing}
-          accessibilityLabel="Changer de caméra"
+          accessibilityLabel={tr("Changer de caméra", "Switch camera")}
         >
           <AntDesign name="retweet" size={32} color="white" />
         </TouchableOpacity>
@@ -852,7 +863,7 @@ export default function Camera() {
         <TouchableOpacity
           style={styles.captureButton}
           onPress={handleTakePhoto}
-          accessibilityLabel="Prendre la photo"
+          accessibilityLabel={tr("Prendre la photo", "Take the photo")}
         >
           <View style={styles.captureInner} />
         </TouchableOpacity>
@@ -862,7 +873,7 @@ export default function Camera() {
             <TouchableOpacity
               style={styles.nextButton}
               onPress={() => setStep("sort")}
-              accessibilityLabel={`Ranger ${pluralize(shots.length, "photo")}`}
+              accessibilityLabel={tr(`Ranger ${pluralize(shots.length, "photo")}`, `Sort ${pluralize(shots.length, "photo")}`)}
             >
               <Ionicons name="arrow-forward" size={26} color="white" />
 

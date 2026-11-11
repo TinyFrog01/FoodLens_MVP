@@ -19,9 +19,9 @@ import TagInput from "@/components/account/TagInput";
 import TopBar, { useGoBack } from "@/components/account/TopBar";
 import {
   ALLERGENS,
-  AVOID_SUGGESTIONS,
+  avoidSuggestions,
   DIETS,
-  FOOD_SUGGESTIONS,
+  foodSuggestions,
   MEMBER_COLORS,
 } from "@/constants/dietary";
 import { CardShadow, Palette, TextStyles } from "@/constants/theme";
@@ -29,6 +29,7 @@ import { useAccount } from "@/context/AccountContext";
 import { createMember } from "@/lib/account/storage";
 import { Account, Member, SELF_ID } from "@/lib/account/types";
 import { confirmAction } from "@/lib/confirm";
+import { useLanguage } from "@/lib/i18n";
 
 const toggle = <T,>(list: T[], value: T) =>
   list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -43,6 +44,7 @@ export default function MemberScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { account } = useAccount();
   const goBack = useGoBack();
+  const { tr } = useLanguage();
 
   if (!account) return null;
 
@@ -58,8 +60,8 @@ export default function MemberScreen() {
       <View style={styles.page}>
         <TopBar />
         <View style={styles.missing}>
-          <Text style={TextStyles.sectionTitle}>Ce membre n&apos;existe plus.</Text>
-          <TextButton label="Retour" onPress={goBack} />
+          <Text style={TextStyles.sectionTitle}>{tr("Ce membre n'existe plus.", "This member no longer exists.")}</Text>
+          <TextButton label={tr("Retour", "Back")} onPress={goBack} />
         </View>
       </View>
     );
@@ -72,6 +74,7 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
   const insets = useSafeAreaInsets();
   const goBack = useGoBack();
   const { saveMember, removeMember } = useAccount();
+  const { tr } = useLanguage();
 
   const isSelf = initial?.id === SELF_ID;
   const [draft, setDraft] = useState<Member>(
@@ -98,9 +101,9 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
 
   const confirmRemove = () =>
     confirmAction({
-      title: `Retirer ${draft.name || "ce membre"} ?`,
-      message: "Ses préférences seront supprimées.",
-      confirmLabel: "Retirer",
+      title: draft.name ? tr(`Retirer ${draft.name} ?`, `Remove ${draft.name}?`) : tr("Retirer ce membre ?", "Remove this member?"),
+      message: tr("Ses préférences seront supprimées.", "Their preferences will be deleted."),
+      confirmLabel: tr("Retirer", "Remove"),
       destructive: true,
       onConfirm: () => {
         removeMember(draft.id);
@@ -108,7 +111,11 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
       },
     });
 
-  const title = isSelf ? "Ton profil alimentaire" : initial ? "Modifier le membre" : "Nouveau membre";
+  const title = isSelf
+    ? tr("Ton profil alimentaire", "Your food profile")
+    : initial
+      ? tr("Modifier le membre", "Edit the member")
+      : tr("Nouveau membre", "New member");
 
   return (
     <View style={styles.page}>
@@ -126,20 +133,20 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
           <View style={styles.identity}>
             <Avatar name={draft.name || "?"} color={draft.color} size={72} />
             <View style={{ flex: 1, marginLeft: 16 }}>
-              <Text style={styles.label}>Prénom</Text>
+              <Text style={styles.label}>{tr("Prénom", "First name")}</Text>
               <TextInput
                 value={draft.name}
                 onChangeText={(name) => {
                   update({ name });
                   if (nameError) setNameError(false);
                 }}
-                placeholder={isSelf ? "Ton prénom" : "Ex. Léa"}
+                placeholder={isSelf ? tr("Ton prénom", "Your first name") : tr("Ex. Léa", "e.g. Leah")}
                 placeholderTextColor="#A6A6A0"
                 autoCapitalize="words"
                 autoFocus={!initial}
                 style={[styles.nameInput, nameError && { borderColor: Palette.danger }]}
               />
-              {nameError ? <Text style={styles.error}>Entre un prénom.</Text> : null}
+              {nameError ? <Text style={styles.error}>{tr("Entre un prénom.", "Enter a first name.")}</Text> : null}
             </View>
           </View>
 
@@ -148,7 +155,7 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
               <Pressable
                 key={color}
                 onPress={() => update({ color })}
-                accessibilityLabel="Couleur de l'avatar"
+                accessibilityLabel={tr("Couleur de l'avatar", "Avatar color")}
                 style={[
                   styles.swatch,
                   { backgroundColor: color },
@@ -159,7 +166,10 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
           </View>
 
           {/* Régime */}
-          <Section title="Régime alimentaire" hint="Seules les recettes compatibles sont proposées.">
+          <Section
+            title={tr("Régime alimentaire", "Diet")}
+            hint={tr("Seules les recettes compatibles sont proposées.", "Only compatible recipes are suggested.")}
+          >
             <View style={styles.chips}>
               {DIETS.map((d) => (
                 <ChoiceChip
@@ -174,8 +184,8 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
 
           {/* Allergies */}
           <Section
-            title="Allergies et intolérances"
-            hint="Les recettes qui en contiennent sont masquées."
+            title={tr("Allergies et intolérances", "Allergies and intolerances")}
+            hint={tr("Les recettes qui en contiennent sont masquées.", "Recipes that contain them are hidden.")}
           >
             <View style={styles.chips}>
               {ALLERGENS.map((a) => (
@@ -188,43 +198,49 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
                 />
               ))}
             </View>
-            <Text style={[styles.subLabel, { marginTop: 8 }]}>Autres aliments à éviter</Text>
+            <Text style={[styles.subLabel, { marginTop: 8 }]}>{tr("Autres aliments à éviter", "Other foods to avoid")}</Text>
             <TagInput
               values={draft.avoid}
               onChange={(avoid) => update({ avoid })}
-              placeholder="Ex. kiwi"
-              suggestions={AVOID_SUGGESTIONS}
+              placeholder={tr("Ex. kiwi", "e.g. kiwi")}
+              suggestions={avoidSuggestions()}
               tone="danger"
             />
           </Section>
 
           {/* Goûts */}
-          <Section title="Aime" hint="Les recettes qui en contiennent passent en premier.">
+          <Section
+            title={tr("Aime", "Likes")}
+            hint={tr("Les recettes qui en contiennent passent en premier.", "Recipes that contain them come first.")}
+          >
             <TagInput
               values={draft.likes}
               onChange={(likes) => update({ likes })}
-              placeholder="Ex. banane, chocolat…"
-              suggestions={without(FOOD_SUGGESTIONS, draft.dislikes)}
+              placeholder={tr("Ex. banane, chocolat…", "e.g. banana, chocolate…")}
+              suggestions={without(foodSuggestions(), draft.dislikes)}
               tone="green"
             />
           </Section>
 
           <Section
-            title="N'aime pas"
-            hint="Les recettes qui en contiennent passent après les autres et sont signalées, pour que tu puisses remplacer l'ingrédient."
+            title={tr("N'aime pas", "Dislikes")}
+            hint={tr(
+              "Les recettes qui en contiennent passent après les autres et sont signalées, pour que tu puisses remplacer l'ingrédient.",
+              "Recipes that contain them come after the others and are flagged, so you can swap the ingredient."
+            )}
           >
             <TagInput
               values={draft.dislikes}
               onChange={(dislikes) => update({ dislikes })}
-              placeholder="Ex. oignon, champignons…"
-              suggestions={without(FOOD_SUGGESTIONS, draft.likes)}
+              placeholder={tr("Ex. oignon, champignons…", "e.g. onion, mushrooms…")}
+              suggestions={without(foodSuggestions(), draft.likes)}
               tone="warn"
             />
           </Section>
 
           {initial && !isSelf && (
             <TextButton
-              label="Retirer ce membre"
+              label={tr("Retirer ce membre", "Remove this member")}
               color={Palette.danger}
               onPress={confirmRemove}
               style={{ marginTop: 6 }}
@@ -233,7 +249,7 @@ function MemberEditor({ account, initial }: { account: Account; initial?: Member
         </ScrollView>
 
         <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-          <PrimaryButton label="Enregistrer" onPress={save} />
+          <PrimaryButton label={tr("Enregistrer", "Save")} onPress={save} />
         </View>
       </KeyboardAvoidingView>
     </View>

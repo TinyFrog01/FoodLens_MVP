@@ -11,12 +11,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Palette } from "@/constants/theme";
+import { tr, useLanguage } from "@/lib/i18n";
 import { formatIngredient } from "@/lib/portions";
 
 export type CookingIngredient = {
+  // Le nom affiché (et cherché dans les étapes), dans la langue choisie.
   name: string;
   quantity: number;
   unit: string;
+  // Le nom français de la recette, pour l'unité en anglais (« stalks » ou « sprigs »).
+  originalName?: string;
 };
 
 type Props = {
@@ -39,16 +43,16 @@ const MOODS: Record<
     icon: keyof typeof MaterialCommunityIcons.glyphMap;
   }
 > = {
-  prep: { bg: Palette.bg, accent: Palette.green, label: "Préparation", icon: "knife" },
-  boil: { bg: "#EAF4FF", accent: "#2E86DE", label: "Ébullition", icon: "pot-steam-outline" },
-  heat: { bg: "#FFF1E6", accent: "#E8622C", label: "Cuisson", icon: "fire" },
-  rest: { bg: "#EEF2F4", accent: "#4F6D7A", label: "Attente", icon: "timer-sand" },
+  prep: { bg: Palette.bg, accent: Palette.green, get label() { return tr("Préparation", "Prep"); }, icon: "knife" },
+  boil: { bg: "#EAF4FF", accent: "#2E86DE", get label() { return tr("Ébullition", "Boiling"); }, icon: "pot-steam-outline" },
+  heat: { bg: "#FFF1E6", accent: "#E8622C", get label() { return tr("Cuisson", "Cooking"); }, icon: "fire" },
+  rest: { bg: "#EEF2F4", accent: "#4F6D7A", get label() { return tr("Attente", "Waiting"); }, icon: "timer-sand" },
 };
 
 type Mood = keyof typeof MOODS;
 
 // Matched on the step without accents or capitals ("Porter à ébullition",
-// "Cuire au four", "Laisser reposer"): the recipes are written in French.
+// "Cuire au four", "Laisser reposer", "Bring to a boil"), in French or English.
 const MOOD_PATTERNS: { mood: Mood; pattern: RegExp }[] = [
   {
     mood: "boil",
@@ -178,16 +182,17 @@ function StepTimer({ duration, accent }: { duration: number; accent: string }) {
     setEndsAt(Date.now() + start * 1000);
   };
 
-  let label = `En pause · ${formatTime(secondsLeft)}`;
+  useLanguage();
+  let label = tr(`En pause · ${formatTime(secondsLeft)}`, `Paused · ${formatTime(secondsLeft)}`);
   let icon: keyof typeof Ionicons.glyphMap = "play";
   if (secondsLeft === 0) {
-    label = "Temps écoulé · toucher pour relancer";
+    label = tr("Temps écoulé · toucher pour relancer", "Time's up · tap to restart");
     icon = "refresh";
   } else if (running) {
-    label = `Il reste ${formatTime(secondsLeft)}`;
+    label = tr(`Il reste ${formatTime(secondsLeft)}`, `${formatTime(secondsLeft)} left`);
     icon = "pause";
   } else if (secondsLeft === duration) {
-    label = `Lancer le minuteur · ${formatTime(secondsLeft)}`;
+    label = tr(`Lancer le minuteur · ${formatTime(secondsLeft)}`, `Start the timer · ${formatTime(secondsLeft)}`);
   }
 
   return (
@@ -218,6 +223,7 @@ function CookingSession({
   instructions,
 }: Omit<Props, "visible">) {
   const insets = useSafeAreaInsets();
+  useLanguage();
   const [stepIndex, setStepIndex] = useState(0);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [showIngredientList, setShowIngredientList] = useState(false);
@@ -254,7 +260,7 @@ function CookingSession({
         <TouchableOpacity
           onPress={onClose}
           style={styles.headerButton}
-          accessibilityLabel="Quitter le mode cuisine"
+          accessibilityLabel={tr("Quitter le mode cuisine", "Leave cooking mode")}
         >
           <Ionicons name="chevron-back" size={24} color={Palette.text} />
         </TouchableOpacity>
@@ -263,7 +269,7 @@ function CookingSession({
         </Text>
         <TouchableOpacity onPress={() => setShowIngredientList((v) => !v)} hitSlop={8}>
           <Text style={[styles.showListText, { color: mood.accent }]}>
-            {showIngredientList ? "Masquer" : "Ingrédients"}
+            {showIngredientList ? tr("Masquer", "Hide") : tr("Ingrédients", "Ingredients")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -322,7 +328,7 @@ function CookingSession({
 
       <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 24 }}>
         <Text style={styles.stepLabel}>
-          Étape {stepIndex + 1} sur {instructions.length}
+          {tr(`Étape ${stepIndex + 1} sur ${instructions.length}`, `Step ${stepIndex + 1} of ${instructions.length}`)}
         </Text>
         <View style={[styles.moodChip, { borderColor: mood.accent }]}>
           <MaterialCommunityIcons name={mood.icon} size={15} color={mood.accent} />
@@ -343,7 +349,7 @@ function CookingSession({
         <TouchableOpacity
           onPress={goPrevStep}
           disabled={stepIndex === 0}
-          accessibilityLabel="Étape précédente"
+          accessibilityLabel={tr("Étape précédente", "Previous step")}
           style={[styles.prevButton, stepIndex === 0 && styles.prevButtonDisabled]}
           activeOpacity={0.7}
         >
@@ -356,7 +362,7 @@ function CookingSession({
 
         <TouchableOpacity style={styles.nextButton} onPress={goNextStep} activeOpacity={0.85}>
           <Text style={styles.nextButtonText}>
-            {isLastStep ? "Terminer" : "Étape suivante"}
+            {isLastStep ? tr("Terminer", "Finish") : tr("Étape suivante", "Next step")}
           </Text>
           {!isLastStep && <Ionicons name="arrow-forward" size={20} color="#FFF" />}
         </TouchableOpacity>

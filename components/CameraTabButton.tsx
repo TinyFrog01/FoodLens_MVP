@@ -5,10 +5,12 @@ import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Palette } from "@/constants/theme";
+import { useLanguage } from "@/lib/i18n";
 
 // Bouton caméra au centre de la barre : la plus grande cible, sous le pouce
 // (une personne sur deux tient son téléphone d'une seule main).
 export function CameraTabButton({ onPress, accessibilityState }: BottomTabBarButtonProps) {
+  const { tr } = useLanguage();
   return (
     <View style={styles.slot}>
       <Pressable
@@ -19,7 +21,7 @@ export function CameraTabButton({ onPress, accessibilityState }: BottomTabBarBut
           onPress?.(event);
         }}
         accessibilityRole="button"
-        accessibilityLabel="Scanner ton frigo"
+        accessibilityLabel={tr("Scanner ton frigo", "Scan your fridge")}
         accessibilityState={accessibilityState}
         hitSlop={8}
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}

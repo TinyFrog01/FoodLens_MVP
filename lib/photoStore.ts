@@ -9,6 +9,7 @@ import {
   itemQuantity,
   normalizeName,
 } from "@/lib/ingredientDetection";
+import { localeOf, tr } from "@/lib/i18n";
 
 const STORAGE_KEY = "photos";
 
@@ -23,7 +24,10 @@ export type StoredPhoto = {
   id: string;
   uri: string;
   category?: CategoryKey;
+  // Libellé de la prise de vue, écrit dans la langue du moment (anciennes photos) ;
+  // `takenAt` (ISO) permet de l'afficher dans la langue choisie.
   date?: string;
+  takenAt?: string;
   items?: DetectedItem[];
   // undefined = photo jamais analysée (anciennes photos).
   detection?: DetectionStatus;
@@ -31,12 +35,19 @@ export type StoredPhoto = {
 };
 
 export const CATEGORY_LABELS: Record<CategoryKey, string> = {
-  fridge: "Frigo",
-  freezer: "Congélateur",
-  pantry: "Garde-manger",
-  counter: "Comptoir",
-  uncategorized: "Non catégorisé",
+  get fridge() { return tr("Frigo", "Fridge"); },
+  get freezer() { return tr("Congélateur", "Freezer"); },
+  get pantry() { return tr("Garde-manger", "Pantry"); },
+  get counter() { return tr("Comptoir", "Counter"); },
+  get uncategorized() { return tr("Non catégorisé", "Uncategorized"); },
 };
+
+// « 8 nov., 17 h 30 » / « Nov 8, 5:30 p.m. »
+export const formatPhotoDate = (date: Date) =>
+  date.toLocaleString(localeOf(), { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+export const photoDateLabel = (photo: StoredPhoto) =>
+  photo.takenAt ? formatPhotoDate(new Date(photo.takenAt)) : (photo.date ?? tr("Sans date", "No date"));
 
 // Section où la photo est affichée : une catégorie inconnue tombe dans
 // "Non catégorisé".
@@ -72,7 +83,7 @@ const normalize = (parsed: any[]): StoredPhoto[] =>
     // Sans ça, la photo resterait "Analyzing…" pour toujours.
     if (photo.detection === "pending" && !analyzing.has(photo.uri)) {
       photo.detection = "error";
-      photo.detectionError = "L'analyse a été interrompue.";
+      photo.detectionError = tr("L'analyse a été interrompue.", "The analysis was interrupted.");
     }
 
     return photo;
@@ -173,8 +184,11 @@ export function deletePhotos(ids: string[]) {
 
 export const deletePhotoMessage = (photo: StoredPhoto) =>
   photo.items?.length
-    ? `Ces aliments seront retirés de ta liste : ${describeItems(photo.items)}.`
-    : "Aucun aliment n'a été trouvé dessus.";
+    ? tr(
+        `Ces aliments seront retirés de ta liste : ${describeItems(photo.items)}.`,
+        `These foods will be removed from your list: ${describeItems(photo.items)}.`
+      )
+    : tr("Aucun aliment n'a été trouvé dessus.", "No food was found on it.");
 
 export type ItemRef = { photoId: string; name: string };
 

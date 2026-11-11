@@ -24,6 +24,7 @@ import {
   RecipeCustomization,
   SELF_ID,
 } from "@/lib/account/types";
+import { tr } from "@/lib/i18n";
 
 export type AccountStatus = "loading" | "none" | "guest" | "account";
 
@@ -100,7 +101,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const signUp = useCallback(
     ({ name, email, password }: { name: string; email: string; password: string }): AuthResult => {
       const current = storedRef.current;
-      if (!current) return { ok: false, error: "Chargement en cours, réessaie." };
+      if (!current) return { ok: false, error: tr("Chargement en cours, réessaie.", "Still loading, try again.") };
       const normalized = normalizeEmail(email);
       const taken = Object.values(current.accounts).some(
         (a) => a.profile.email === normalized
@@ -108,7 +109,10 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       if (taken) {
         return {
           ok: false,
-          error: "Un compte existe déjà avec ce courriel sur cet appareil. Connecte-toi.",
+          error: tr(
+            "Un compte existe déjà avec ce courriel sur cet appareil. Connecte-toi.",
+            "An account with this email already exists on this device. Log in."
+          ),
         };
       }
       const profile = createAccount(name, normalized);
@@ -129,16 +133,16 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const logIn = useCallback(
     ({ email, password }: { email: string; password: string }): AuthResult => {
       const current = storedRef.current;
-      if (!current) return { ok: false, error: "Chargement en cours, réessaie." };
+      if (!current) return { ok: false, error: tr("Chargement en cours, réessaie.", "Still loading, try again.") };
       const normalized = normalizeEmail(email);
       const entry = Object.values(current.accounts).find(
         (a) => a.profile.email === normalized
       );
       if (!entry) {
-        return { ok: false, error: "Aucun compte avec ce courriel sur cet appareil." };
+        return { ok: false, error: tr("Aucun compte avec ce courriel sur cet appareil.", "No account with this email on this device.") };
       }
       if (hashPassword(password, entry.auth.salt) !== entry.auth.hash) {
-        return { ok: false, error: "Mot de passe incorrect." };
+        return { ok: false, error: tr("Mot de passe incorrect.", "Wrong password.") };
       }
       commit({ ...current, session: { mode: "account", accountId: entry.profile.id } });
       return { ok: true };

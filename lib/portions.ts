@@ -1,4 +1,6 @@
 import type { Recipe } from "@/app/Food/data/recipe/types";
+import { tr } from "@/lib/i18n";
+import { unitLabel } from "@/lib/recipeText";
 
 // Portions d'origine de la recette (certaines recettes n'en indiquent pas).
 export const recipeServings = (recipe: Recipe) =>
@@ -15,7 +17,11 @@ export function defaultServings(recipe: Recipe, peopleCount: number) {
 }
 
 export const profileLabel = (peopleCount: number) =>
-  peopleCount >= 3 ? "ta famille" : peopleCount === 2 ? "vous deux" : "toi";
+  peopleCount >= 3
+    ? tr("ta famille", "your family")
+    : peopleCount === 2
+      ? tr("vous deux", "the two of you")
+      : tr("toi", "you");
 
 const FRACTIONS: [number, string][] = [
   [1 / 4, "¼"],
@@ -28,7 +34,8 @@ const FRACTIONS: [number, string][] = [
 // Unités où une décimale n'aide personne : « 333 g » plutôt que « 333,33 g ».
 const ROUNDED_UNITS = new Set(["g", "ml", "mL"]);
 
-// 1.5 -> « 1 ½ », 0.333 -> « ⅓ », 2.4 -> « 2,4 » : plus facile à lire en cuisine.
+// 1.5 -> « 1 ½ », 0.333 -> « ⅓ », 2.4 -> « 2,4 » (« 2.4 » en anglais) : plus
+// facile à lire en cuisine.
 export function formatQuantity(value: number) {
   const rounded = Math.round(value * 100) / 100;
   const whole = Math.floor(rounded);
@@ -37,16 +44,20 @@ export function formatQuantity(value: number) {
 
   const fraction = FRACTIONS.find(([f]) => Math.abs(rest - f) < 0.04);
   if (fraction) return whole > 0 ? `${whole} ${fraction[1]}` : fraction[1];
-  return `${rounded}`.replace(".", ",");
+  return tr(`${rounded}`.replace(".", ","), `${rounded}`);
 }
 
-// « 250 g farine », « ½ poulet entier » ; une quantité nulle (« au goût ») n'est pas affichée.
+// « 250 g farine », « ½ poulet entier », « 2 cloves garlic » ; une quantité nulle
+// (« au goût ») n'est pas affichée. `label` : le nom à afficher, s'il n'est pas
+// `name` (recette en anglais) ; `originalName` : le nom français de la recette,
+// qui dit si « branches » se lit « stalks » (céleri) ou « sprigs » (thym).
 export function formatIngredient(
-  ingredient: { name: string; quantity: number; unit: string },
+  ingredient: { name: string; quantity: number; unit: string; label?: string; originalName?: string },
   factor = 1
 ) {
   let quantity = ingredient.quantity * factor;
   if (ROUNDED_UNITS.has(ingredient.unit) && quantity >= 10) quantity = Math.round(quantity);
   const amount = quantity > 0 ? formatQuantity(quantity) : "";
-  return [amount, ingredient.unit, ingredient.name].filter(Boolean).join(" ");
+  const unit = unitLabel(ingredient.unit, quantity, ingredient.originalName ?? ingredient.name);
+  return [amount, unit, ingredient.label ?? ingredient.name].filter(Boolean).join(" ");
 }

@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { Palette } from "@/constants/theme";
 import { useAccount } from "@/context/AccountContext";
+import { useLanguage } from "@/lib/i18n";
 
 import Avatar from "./Avatar";
 
@@ -12,13 +13,14 @@ import Avatar from "./Avatar";
 export default function AvatarButton({ onDark = false }: { onDark?: boolean }) {
   const router = useRouter();
   const { account } = useAccount();
+  const { tr } = useLanguage();
 
   return (
     <Pressable
       onPress={() => router.push("/profile")}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={account ? "Mon compte" : "Créer un compte"}
+      accessibilityLabel={account ? tr("Mon compte", "My account") : tr("Créer un compte", "Create an account")}
       style={({ pressed }) => [styles.wrap, onDark && styles.onDark, pressed && { opacity: 0.8 }]}
     >
       {account ? (

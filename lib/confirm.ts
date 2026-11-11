@@ -1,11 +1,13 @@
 import { Alert, Platform } from "react-native";
 
+import { tr } from "@/lib/i18n";
+
 // Alert.alert avec boutons ne fait rien sur le web : on retombe sur window.confirm.
 export function confirmAction({
   title,
   message,
   confirmLabel,
-  cancelLabel = "Annuler",
+  cancelLabel = tr("Annuler", "Cancel"),
   destructive = false,
   onConfirm,
 }: {

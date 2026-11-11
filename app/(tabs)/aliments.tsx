@@ -1,8 +1,8 @@
-import { items } from "@/app/Food/data/items";
 import { staples } from "@/app/Food/data/staples";
 import AvatarButton from "@/components/account/AvatarButton";
 import { useAlwaysOnHand } from "@/hooks/useAlwaysOnHand";
 import { usePhotos } from "@/hooks/usePhotos";
+import { useLanguage } from "@/lib/i18n";
 import { normalizeName } from "@/lib/ingredientDetection";
 import {
   CATEGORY_LABELS,
@@ -41,8 +41,6 @@ type Item = {
   name: string;
   location: string;
   quantity: number;
-  // Vu sur au moins une photo (ic\u00f4ne appareil photo dans la liste).
-  fromPhoto?: boolean;
 };
 
 const removeAccent = (str: string) =>
@@ -51,49 +49,35 @@ const removeAccent = (str: string) =>
 const categoriesLabel = (ingredient: PhotoIngredient) =>
   ingredient.categories.map((c) => CATEGORY_LABELS[c]).join(", ");
 
-// \u2705 Ajoute \u00e0 l'inventaire les ingr\u00e9dients confirm\u00e9s sur les photos : + la
-// quantit\u00e9 vue sur chaque photo pour un aliment d\u00e9j\u00e0 list\u00e9, sinon une nouvelle
-// entr\u00e9e rang\u00e9e selon la cat\u00e9gorie de la photo. Tri\u00e9 pour que les lettres
-// restent dans l'ordre.
-const mergeInventory = (base: Item[], detected: PhotoIngredient[]) => {
-  const merged = base.map((item) => ({ ...item }));
-
-  detected.forEach((ingredient) => {
-    const key = normalizeName(ingredient.name);
-    const existing = merged.find((item) => normalizeName(item.name) === key);
-
-    if (existing) {
-      existing.quantity += ingredient.quantity;
-      existing.fromPhoto = true;
-      return;
-    }
-
-    merged.push({
+// \u2705 L'inventaire = les ingr\u00e9dients confirm\u00e9s sur les photos, avec la quantit\u00e9
+// vue sur l'ensemble des photos et l'endroit o\u00f9 ils ont \u00e9t\u00e9 photographi\u00e9s.
+// Tri\u00e9 pour que les lettres restent dans l'ordre.
+const toInventory = (detected: PhotoIngredient[]): Item[] =>
+  detected
+    .map((ingredient) => ({
       id: `photo-${ingredient.key}`,
       name: ingredient.name,
       location: categoriesLabel(ingredient),
       quantity: ingredient.quantity,
-      fromPhoto: true,
-    });
-  });
-
-  return merged.sort((a, b) =>
-    normalizeName(a.name).localeCompare(normalizeName(b.name))
-  );
-};
+    }))
+    .sort((a, b) => normalizeName(a.name).localeCompare(normalizeName(b.name)));
 
 // \u2705 Ingr\u00e9dients vus sur les photos mais sous le seuil de confiance :
 // l'utilisateur les garde (ils rejoignent la liste) ou les retire.
 const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
+  const { tr } = useLanguage();
   if (ingredients.length === 0) return null;
 
   return (
     <View style={[styles.staplesCard, styles.reviewCard]}>
       <View style={styles.staplesHeader}>
         <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={styles.staplesTitle}>À vérifier</Text>
+          <Text style={styles.staplesTitle}>{tr("À vérifier", "To check")}</Text>
           <Text style={styles.staplesSubtitle}>
-            {"Vus sur tes photos, mais l'IA n'en est pas sûre. Garde ceux que tu as vraiment."}
+            {tr(
+              "Vus sur tes photos, mais l'IA n'en est pas sûre. Garde ceux que tu as vraiment.",
+              "Seen on your photos, but the AI isn't sure. Keep the ones you really have."
+            )}
           </Text>
         </View>
         <Text style={[styles.staplesCount, styles.reviewCount]}>
@@ -113,7 +97,10 @@ const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
             <Text style={styles.reviewMeta} numberOfLines={1}>
               {categoriesLabel(ingredient)}
               {ingredient.confidence !== undefined
-                ? ` \u00b7 s\u00fbr \u00e0 ${Math.round(ingredient.confidence * 100)} %`
+                ? tr(
+                    ` \u00b7 s\u00fbr \u00e0 ${Math.round(ingredient.confidence * 100)} %`,
+                    ` \u00b7 ${Math.round(ingredient.confidence * 100)}% sure`
+                  )
                 : ""}
             </Text>
           </View>
@@ -121,7 +108,7 @@ const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
           <Pressable
             style={styles.reviewRemove}
             onPress={() => reviewItems(ingredient.refs, "remove").catch(console.error)}
-            accessibilityLabel={`Retirer ${ingredient.name}`}
+            accessibilityLabel={tr(`Retirer ${ingredient.name}`, `Remove ${ingredient.name}`)}
           >
             <MaterialCommunityIcons name="close" size={16} color={TEXT_MUTED} />
           </Pressable>
@@ -129,7 +116,7 @@ const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
             style={styles.reviewKeep}
             onPress={() => reviewItems(ingredient.refs, "confirm").catch(console.error)}
           >
-            <Text style={styles.reviewKeepText}>Garder</Text>
+            <Text style={styles.reviewKeepText}>{tr("Garder", "Keep")}</Text>
           </Pressable>
         </View>
       ))}
@@ -139,19 +126,22 @@ const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
 
 const AlwaysOnHandCard = () => {
   const { activeIds, toggle } = useAlwaysOnHand();
+  const { tr } = useLanguage();
 
   return (
     <View style={styles.staplesCard}>
       <View style={styles.staplesHeader}>
         <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={styles.staplesTitle}>Always on hand</Text>
+          <Text style={styles.staplesTitle}>{tr("Toujours sous la main", "Always on hand")}</Text>
           <Text style={styles.staplesSubtitle}>
-            Ingrédients de base toujours disponibles. Désactive ceux qu'il
-            t'arrive de manquer — les recettes en tiendront compte.
+            {tr(
+              "Ingrédients de base toujours disponibles. Désactive ceux qu'il t'arrive de manquer — les recettes en tiendront compte.",
+              "Basic ingredients you always have. Turn off the ones you sometimes run out of — recipes will take it into account."
+            )}
           </Text>
         </View>
         <Text style={styles.staplesCount}>
-          {activeIds.length} sur {staples.length}
+          {tr(`${activeIds.length} sur ${staples.length}`, `${activeIds.length} of ${staples.length}`)}
         </Text>
       </View>
 
@@ -179,7 +169,7 @@ const AlwaysOnHandCard = () => {
                   active && styles.staplesLabelActive,
                 ]}
               >
-                {staple.name}
+                {staple.label}
               </Text>
             </Pressable>
           );
@@ -190,6 +180,7 @@ const AlwaysOnHandCard = () => {
 };
 
 export default function HomeScreen() {
+  const { tr, language } = useLanguage();
   const [search, setSearch] = useState("");
   const flatListRef = useRef<FlatList>(null);
 
@@ -212,12 +203,14 @@ export default function HomeScreen() {
   // staples are active / how many rows they wrap onto.
   const listHeaderHeight = useRef(0);
 
-  // ✅ Inventaire = liste de base + ingrédients confirmés sur les photos.
+  // ✅ Inventaire = ingrédients confirmés sur les photos.
   const photos = usePhotos();
   const photoIngredients = useMemo(() => collectIngredients(photos), [photos]);
+  // La langue : les lieux (« Frigo », « Fridge ») sont écrits sur chaque aliment.
   const inventory = useMemo(
-    () => mergeInventory(items, photoIngredients.confirmed),
-    [photoIngredients]
+    () => toInventory(photoIngredients.confirmed),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [photoIngredients, language]
   );
 
   const fuse = useMemo(
@@ -379,14 +372,12 @@ export default function HomeScreen() {
         <View>
           <Text style={styles.title}>{item.name}</Text>
           <View style={styles.subtitleRow}>
-            {item.fromPhoto && (
-              <MaterialCommunityIcons
-                name="camera-outline"
-                size={14}
-                color={TEXT_MUTED}
-                style={styles.subtitleIcon}
-              />
-            )}
+            <MaterialCommunityIcons
+              name="camera-outline"
+              size={14}
+              color={TEXT_MUTED}
+              style={styles.subtitleIcon}
+            />
             <Text style={styles.subtitle}>{item.location}</Text>
           </View>
         </View>
@@ -403,33 +394,35 @@ export default function HomeScreen() {
         <View style={styles.headerAvatar}>
           <AvatarButton />
         </View>
-        <Text style={styles.eyebrow}>TON FRIGO</Text>
-        <Text style={styles.pageTitle}>Tes aliments</Text>
-        <Text style={styles.pageSubtitle}>Tout ce que tu as en ce moment dans ta cuisine.</Text>
+        <Text style={styles.eyebrow}>{tr("TON FRIGO", "YOUR FRIDGE")}</Text>
+        <Text style={styles.pageTitle}>{tr("Tes aliments", "Your food")}</Text>
+        <Text style={styles.pageSubtitle}>
+          {tr("Tout ce que tu as en ce moment dans ta cuisine.", "Everything you have in your kitchen right now.")}
+        </Text>
       </View>
 
       <View style={styles.statsCard}>
         <View style={styles.statBlock}>
           <Text style={styles.statNumber}>{totalItems}</Text>
-          <Text style={styles.statLabel}>Aliments</Text>
+          <Text style={styles.statLabel}>{tr("Aliments", "Foods")}</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
           <Text style={styles.statNumber}>{totalUnits}</Text>
-          <Text style={styles.statLabel}>Unités</Text>
+          <Text style={styles.statLabel}>{tr("Unités", "Units")}</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
           <Text style={[styles.statNumber, lowStock > 0 && styles.statNumberWarn]}>
             {lowStock}
           </Text>
-          <Text style={styles.statLabel}>Presque fini</Text>
+          <Text style={styles.statLabel}>{tr("Presque fini", "Running low")}</Text>
         </View>
       </View>
 
       <TextInput
         style={styles.search}
-        placeholder="Chercher dans ton frigo…"
+        placeholder={tr("Chercher dans ton frigo…", "Search your fridge…")}
         placeholderTextColor="#A6A6A0"
         value={search}
         onChangeText={setSearch}

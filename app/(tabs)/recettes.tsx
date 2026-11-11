@@ -14,12 +14,14 @@ import CompletionBar from "@/components/CompletionBar";
 import AvatarButton from "@/components/account/AvatarButton";
 import { usePhotos } from "@/hooks/usePhotos";
 import { confirmAction } from "@/lib/confirm";
+import { tr, useLanguage } from "@/lib/i18n";
 import { countItems } from "@/lib/ingredientDetection";
 import {
   CategoryKey,
   categoryOf,
   deletePhotoMessage,
   deletePhotos,
+  photoDateLabel,
   StoredPhoto as Photo,
 } from "@/lib/photoStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -41,15 +43,16 @@ const CATEGORIES: {
   label: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
 }[] = [
-  { key: "fridge", label: "Frigo", icon: "fridge-outline" },
-  { key: "freezer", label: "Congélateur", icon: "snowflake" },
-  { key: "pantry", label: "Garde-manger", icon: "food-variant" },
-  { key: "counter", label: "Comptoir", icon: "countertop-outline" },
-  { key: "uncategorized", label: "Non catégorisé", icon: "help-box-outline" },
+  { key: "fridge", get label() { return tr("Frigo", "Fridge"); }, icon: "fridge-outline" },
+  { key: "freezer", get label() { return tr("Congélateur", "Freezer"); }, icon: "snowflake" },
+  { key: "pantry", get label() { return tr("Garde-manger", "Pantry"); }, icon: "food-variant" },
+  { key: "counter", get label() { return tr("Comptoir", "Counter"); }, icon: "countertop-outline" },
+  { key: "uncategorized", get label() { return tr("Non catégorisé", "Uncategorized"); }, icon: "help-box-outline" },
 ];
 
 export default function Recette() {
   const router = useRouter();
+  useLanguage(); // redessine l'écran quand la langue change
   // ✅ Mis à jour en direct : une photo enregistrée pendant son analyse
   // passe de "Analyzing…" à son résultat sans quitter l'écran.
   const photos = usePhotos();
@@ -145,7 +148,7 @@ export default function Recette() {
       return (
         <View style={styles.badgeMuted}>
           <ActivityIndicator size="small" color={TEXT_MUTED} style={styles.badgeSpinner} />
-          <Text style={styles.badgeMutedText}>Analyse…</Text>
+          <Text style={styles.badgeMutedText}>{tr("Analyse…", "Analyzing…")}</Text>
         </View>
       );
     }
@@ -155,7 +158,9 @@ export default function Recette() {
         <View style={styles.badgeMuted}>
           <Ionicons name="cloud-offline-outline" size={14} color={TEXT_MUTED} />
           <Text style={styles.badgeMutedText}>
-            {item.detection === "error" ? "Échec de l'analyse" : "Pas analysée"}
+            {item.detection === "error"
+              ? tr("Échec de l'analyse", "Analysis failed")
+              : tr("Pas analysée", "Not analyzed")}
           </Text>
         </View>
       );
@@ -167,7 +172,7 @@ export default function Recette() {
       return (
         <View style={styles.badge}>
           <Ionicons name="warning-outline" size={14} color="#E85C41" />
-          <Text style={styles.badgeText}>{needCheck} à vérifier</Text>
+          <Text style={styles.badgeText}>{tr(`${needCheck} à vérifier`, `${needCheck} to check`)}</Text>
         </View>
       );
     }
@@ -176,14 +181,14 @@ export default function Recette() {
       <View style={styles.badgeGreen}>
         <Ionicons name="checkmark-circle-outline" size={14} color="#37B24D" />
         <Text style={styles.badgeGreenText}>
-          {identified} identifié{identified > 1 ? "s" : ""}
+          {tr(`${identified} identifié${identified > 1 ? "s" : ""}`, `${identified} identified`)}
         </Text>
       </View>
     );
   };
 
   const renderPhotoCard = (item: Photo) => {
-    const dateLabel = item.date ?? "Sans date";
+    const dateLabel = photoDateLabel(item);
 
     // ✅ Si la catégorie de la photo est connue (pas "uncategorized"), on la
     // repasse à la caméra pour que le "redo" sauvegarde directement sans
@@ -206,9 +211,9 @@ export default function Recette() {
 
     const handleDelete = () =>
       confirmAction({
-        title: "Supprimer cette photo ?",
+        title: tr("Supprimer cette photo ?", "Delete this photo?"),
         message: deletePhotoMessage(item),
-        confirmLabel: "Supprimer",
+        confirmLabel: tr("Supprimer", "Delete"),
         destructive: true,
         onConfirm: () => deletePhotos([item.id]).catch(console.error),
       });
@@ -246,7 +251,7 @@ export default function Recette() {
             style={styles.deleteButton}
             onPress={handleDelete}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityLabel="Supprimer la photo"
+            accessibilityLabel={tr("Supprimer la photo", "Delete the photo")}
           >
             <Ionicons name="trash-outline" size={16} color="white" />
           </TouchableOpacity>
@@ -278,7 +283,7 @@ export default function Recette() {
         }
       >
         <Ionicons name="add" size={70} color="#B8B8B8" />
-        <Text style={styles.addText}>Ajouter une photo</Text>
+        <Text style={styles.addText}>{tr("Ajouter une photo", "Add a photo")}</Text>
       </TouchableOpacity>
     );
   };
@@ -315,11 +320,13 @@ export default function Recette() {
       confirmAction({
         title:
           items.length > 1
-            ? `Supprimer les ${items.length} photos « ${config.label} » ?`
-            : `Supprimer la photo « ${config.label} » ?`,
-        message:
+            ? tr(`Supprimer les ${items.length} photos « ${config.label} » ?`, `Delete the ${items.length} “${config.label}” photos?`)
+            : tr(`Supprimer la photo « ${config.label} » ?`, `Delete the “${config.label}” photo?`),
+        message: tr(
           "Les aliments trouvés dessus seront retirés de ta liste. Ceux aussi vus sur d'autres photos y restent.",
-        confirmLabel: "Tout supprimer",
+          "The foods found on them will be removed from your list. Those also seen on other photos stay."
+        ),
+        confirmLabel: tr("Tout supprimer", "Delete all"),
         destructive: true,
         onConfirm: () =>
           deletePhotos(items.map((p) => p.id)).catch(console.error),
@@ -342,10 +349,10 @@ export default function Recette() {
           <View style={styles.sectionTitleWrap}>
             <Text style={styles.sectionTitle}>{config.label}</Text>
             <Text style={styles.sectionSubtitle} numberOfLines={1}>
-              {items.length} photo{items.length !== 1 ? "s" : ""}
+              {`${items.length} photo${items.length !== 1 ? "s" : ""}`}
               {totalCount > 0 && (
                 <Text style={styles.sectionCount}>
-                  {` · ${identifiedCount} sur ${totalCount} identifiés`}
+                  {tr(` · ${identifiedCount} sur ${totalCount} identifiés`, ` · ${identifiedCount} of ${totalCount} identified`)}
                 </Text>
               )}
             </Text>
@@ -357,7 +364,7 @@ export default function Recette() {
                 style={styles.sectionAction}
                 onPress={handleRedoCategory}
                 hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                accessibilityLabel={`Reprendre toutes les photos : ${config.label}`}
+                accessibilityLabel={tr(`Reprendre toutes les photos : ${config.label}`, `Retake all photos: ${config.label}`)}
               >
                 <Ionicons name="refresh" size={18} color="#1C1C1A" />
               </TouchableOpacity>
@@ -366,7 +373,7 @@ export default function Recette() {
                 style={[styles.sectionAction, styles.sectionActionDanger]}
                 onPress={handleDeleteCategory}
                 hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
-                accessibilityLabel={`Supprimer toutes les photos : ${config.label}`}
+                accessibilityLabel={tr(`Supprimer toutes les photos : ${config.label}`, `Delete all photos: ${config.label}`)}
               >
                 <Ionicons name="trash-outline" size={18} color="#E85C41" />
               </TouchableOpacity>
@@ -413,10 +420,10 @@ export default function Recette() {
         <View style={styles.headerAvatar}>
           <AvatarButton />
         </View>
-        <Text style={styles.eyebrow}>TES SCANS</Text>
-        <Text style={styles.pageTitle}>Tes photos</Text>
+        <Text style={styles.eyebrow}>{tr("TES SCANS", "YOUR SCANS")}</Text>
+        <Text style={styles.pageTitle}>{tr("Tes photos", "Your photos")}</Text>
         <Text style={styles.pageSubtitle}>
-          Chaque frigo que tu as scanné apparaît ici.
+          {tr("Chaque frigo que tu as scanné apparaît ici.", "Every fridge you've scanned shows up here.")}
         </Text>
       </View>
 
@@ -428,12 +435,12 @@ export default function Recette() {
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
           <Text style={styles.statNumber}>{totalItems}</Text>
-          <Text style={styles.statLabel}>Aliments vus</Text>
+          <Text style={styles.statLabel}>{tr("Aliments vus", "Foods seen")}</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
           <Text style={styles.statNumber}>{totalNeedCheck}</Text>
-          <Text style={styles.statLabel}>À vérifier</Text>
+          <Text style={styles.statLabel}>{tr("À vérifier", "To check")}</Text>
         </View>
       </View>
 
@@ -454,10 +461,10 @@ export default function Recette() {
           <View style={styles.emptyContainer}>
             <Ionicons name="images-outline" size={70} color="#BFBFBF" />
 
-            <Text style={styles.emptyTitle}>Aucun frigo scanné</Text>
+            <Text style={styles.emptyTitle}>{tr("Aucun frigo scanné", "No fridge scanned")}</Text>
 
             <Text style={styles.emptyText}>
-              Touche le bouton caméra pour scanner ton frigo.
+              {tr("Touche le bouton caméra pour scanner ton frigo.", "Tap the camera button to scan your fridge.")}
             </Text>
           </View>
         ) : (

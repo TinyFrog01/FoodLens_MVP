@@ -236,4 +236,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseRecipe, recipeData };
+module.exports = { SITE, USER_AGENT, fetchPage, parseRecipe, recipeData, instructionGroups };

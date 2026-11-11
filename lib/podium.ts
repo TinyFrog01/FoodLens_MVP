@@ -1,13 +1,15 @@
 import type { Recipe } from "@/app/Food/data/recipe/types";
-import type { Staple } from "@/app/Food/data/staples";
-import { isIngredientOnHand } from "@/app/Food/data/utils/ingredients";
+import type { OnHandCheck } from "@/app/Food/data/utils/ingredients";
 import { parseMinutes, RecipeVerdict } from "@/lib/account/recipeFilter";
+import { tr } from "@/lib/i18n";
+import { ingredientLabel } from "@/lib/recipeText";
 
-// Ce que tu as pour une recette : nombre d'ingrédients déjà là et ceux qui manquent.
+// Ce que tu as pour une recette : nombre d'ingrédients déjà là et ceux qui
+// manquent (leur place dans recipe.ingredients, pour les nommer dans la langue choisie).
 export type FridgeMatch = {
   verdict: RecipeVerdict;
   have: number;
-  missing: string[];
+  missing: number[];
 };
 
 export type Podium = {
@@ -21,10 +23,10 @@ export type Podium = {
 // Un soir de semaine, une recette de plus d'une heure passe après les autres.
 const WEEKNIGHT_MINUTES = 60;
 
-export function matchFridge(verdict: RecipeVerdict, alwaysOnHand: Staple[]): FridgeMatch {
-  const missing = verdict.recipe.ingredients
-    .filter((ingredient) => !isIngredientOnHand(ingredient.name, alwaysOnHand))
-    .map((ingredient) => ingredient.name);
+export function matchFridge(verdict: RecipeVerdict, isOnHand: OnHandCheck): FridgeMatch {
+  const missing = verdict.recipe.ingredients.flatMap((ingredient, index) =>
+    isOnHand(ingredient) ? [] : [index]
+  );
   return { verdict, have: verdict.recipe.ingredients.length - missing.length, missing };
 }
 
@@ -32,14 +34,20 @@ export function matchFridge(verdict: RecipeVerdict, alwaysOnHand: Staple[]): Fri
 // ses aliments plus précieux, et leur gaspillage plus pénible.
 export function haveLabel(match: FridgeMatch) {
   const total = match.verdict.recipe.ingredients.length;
-  return `Tu as ${match.have} ingrédient${match.have > 1 ? "s" : ""} sur ${total}`;
+  return tr(
+    `Tu as ${match.have} ingrédient${match.have > 1 ? "s" : ""} sur ${total}`,
+    `You have ${match.have} of ${total} ingredient${total === 1 ? "" : "s"}`
+  );
 }
 
 // « Il te manque : bacon, zeste de citron »
 export function missingLabel(match: FridgeMatch) {
-  if (match.missing.length === 0) return "Tout est déjà dans ton frigo.";
-  const names = match.missing.map((name) => name.charAt(0).toLowerCase() + name.slice(1));
-  return `Il te manque : ${names.join(", ")}`;
+  if (match.missing.length === 0) return tr("Tout est déjà dans ton frigo.", "Everything is already in your fridge.");
+  const names = match.missing
+    .map((index) => ingredientLabel(match.verdict.recipe, index))
+    .map((name) => name.charAt(0).toLowerCase() + name.slice(1))
+    .join(", ");
+  return tr(`Il te manque : ${names}`, `You're missing: ${names}`);
 }
 
 const isWeeknight = (recipe: Recipe) => {
@@ -54,10 +62,10 @@ const taste = (verdict: RecipeVerdict) => verdict.likes.length - 2 * verdict.dis
 // Les recettes qui collent le mieux à ce que tu as : d'abord celles qui se
 // font en une heure, puis le moins d'ingrédients manquants, la plus grande
 // part déjà là, et enfin les goûts des personnes choisies.
-function rank(verdicts: RecipeVerdict[], alwaysOnHand: Staple[]) {
+function rank(verdicts: RecipeVerdict[], isOnHand: OnHandCheck) {
   return verdicts
     .map((verdict, index) => ({
-      match: matchFridge(verdict, alwaysOnHand),
+      match: matchFridge(verdict, isOnHand),
       weeknight: isWeeknight(verdict.recipe),
       index,
     }))
@@ -74,11 +82,11 @@ function rank(verdicts: RecipeVerdict[], alwaysOnHand: Staple[]) {
 
 // Or, argent, bronze : trois soupers parmi les plats principaux. Si les
 // filtres en laissent moins de trois, on complète avec le reste.
-export function buildPodium(visible: RecipeVerdict[], alwaysOnHand: Staple[]): Podium {
+export function buildPodium(visible: RecipeVerdict[], isOnHand: OnHandCheck): Podium {
   const isMain = (verdict: RecipeVerdict) => verdict.recipe.course === "main";
-  let top = rank(visible.filter(isMain), alwaysOnHand).slice(0, 3);
+  let top = rank(visible.filter(isMain), isOnHand).slice(0, 3);
   if (top.length < 3) {
-    top = [...top, ...rank(visible.filter((v) => !isMain(v)), alwaysOnHand)].slice(0, 3);
+    top = [...top, ...rank(visible.filter((v) => !isMain(v)), isOnHand)].slice(0, 3);
   }
 
   const onPodium = new Set(top.map((match) => match.verdict.recipe.id));
