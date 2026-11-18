@@ -1,11 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
+  capitalize,
   describeItems,
   DetectedItem,
+  Detection,
   DetectionStatus,
   detectIngredients,
   detectionErrorMessage,
+  ImageSize,
   itemQuantity,
   normalizeName,
 } from "@/lib/ingredientDetection";
@@ -32,6 +35,9 @@ export type StoredPhoto = {
   // undefined = photo jamais analysée (anciennes photos).
   detection?: DetectionStatus;
   detectionError?: string;
+  // Taille de la photo vue par l'API : les boîtes des ingrédients y sont
+  // exprimées en fractions. Absente sur les anciennes photos.
+  imageSize?: ImageSize;
 };
 
 export const CATEGORY_LABELS: Record<CategoryKey, string> = {
@@ -141,13 +147,14 @@ const updatePhoto = (
 export async function saveDetectionResult(
   id: string,
   uri: string,
-  detection: Promise<DetectedItem[]>
+  detection: Promise<Detection>
 ) {
   try {
-    const items = await detection;
+    const { items, imageSize } = await detection;
     await updatePhoto(id, uri, (p) => ({
       ...p,
       items,
+      imageSize,
       detection: "done",
       detectionError: undefined,
     }));
@@ -192,6 +199,14 @@ export const deletePhotoMessage = (photo: StoredPhoto) =>
 
 export type ItemRef = { photoId: string; name: string };
 
+// Gardé (ou corrigé, ou ajouté à la main) : il compte dans les recettes et
+// n'est plus « passé ».
+const asConfirmed = (item: DetectedItem): DetectedItem => ({
+  ...item,
+  confirmed: true,
+  skipped: undefined,
+});
+
 // "Garder" (confirm) ou "Retirer" (remove) un ingrédient à vérifier, sur une
 // ou plusieurs photos à la fois.
 export function reviewItems(refs: ItemRef[], action: "confirm" | "remove") {
@@ -210,12 +225,108 @@ export function reviewItems(refs: ItemRef[], action: "confirm" | "remove") {
         items:
           action === "remove"
             ? photo.items.filter((item) => !matches(item))
-            : photo.items.map((item) =>
-                matches(item) ? { ...item, confirmed: true } : item
-              ),
+            : photo.items.map((item) => (matches(item) ? asConfirmed(item) : item)),
       };
     })
   );
+}
+
+// ─────────────────────────────────────────────
+// Vérification une carte à la fois (paquet à glisser)
+// ─────────────────────────────────────────────
+
+type ItemsChange = (items: DetectedItem[]) => DetectedItem[];
+
+const isNamed = (name: string) => (item: DetectedItem) =>
+  normalizeName(item.name) === normalizeName(name);
+
+// ✅ Change les ingrédients d'une seule photo. Renvoie ceux d'avant, pour
+// pouvoir annuler en les remettant tels quels.
+export async function editPhotoItems(photoId: string, change: ItemsChange) {
+  let before: DetectedItem[] | undefined;
+  await updatePhotos((photos) =>
+    photos.map((p) => {
+      if (p.id !== photoId || !p.items) return p;
+      before = p.items;
+      return { ...p, items: change(p.items) };
+    })
+  );
+  return before;
+}
+
+export const keepItem = (name: string): ItemsChange => (items) =>
+  items.map((item) => (isNamed(name)(item) ? asConfirmed(item) : item));
+
+export const removeItem = (name: string): ItemsChange => (items) =>
+  items.filter((item) => !isNamed(name)(item));
+
+// ✅ « Passer » : l'ingrédient reste à vérifier, en jaune, sans compter dans
+// les recettes. Plusieurs noms d'un coup pour « Tout passer ».
+export const skipItems = (names: string[]): ItemsChange => (items) =>
+  items.map((item) =>
+    !item.confirmed && names.some((name) => isNamed(name)(item))
+      ? { ...item, skipped: true }
+      : item
+  );
+
+// ✅ « Ce n'est pas ça, c'est… » : l'ingrédient prend le nom écrit par
+// l'utilisateur et compte comme vérifié. Si ce nom est déjà sur la photo, les
+// deux ne font plus qu'un (quantités additionnées, mêmes boîtes).
+export const renameItem = (oldName: string, newName: string): ItemsChange => (items) => {
+  const name = newName.trim();
+  const old = items.find(isNamed(oldName));
+  if (!old || !name) return items;
+
+  const existing = items.find((item) => item !== old && isNamed(name)(item));
+  if (!existing) {
+    // Le score de l'IA ne veut plus rien dire pour un nom donné à la main.
+    const corrected = { ...asConfirmed(old), name: capitalize(name), confidence: undefined };
+    return items.map((item) => (item === old ? corrected : item));
+  }
+
+  const boxes = [...(existing.boxes ?? []), ...(old.boxes ?? [])];
+  const merged: DetectedItem = {
+    ...asConfirmed(existing),
+    quantity: itemQuantity(existing) + itemQuantity(old),
+    ...(boxes.length > 0 ? { boxes } : {}),
+  };
+  return items
+    .filter((item) => item !== old)
+    .map((item) => (item === existing ? merged : item));
+};
+
+// ✅ Ingrédient oublié par l'IA, écrit au bout de la liste : sûr d'office,
+// sans score ni place sur la photo. S'il y est déjà et vérifié, ça en fait un
+// de plus ; encore « à vérifier », c'est que l'IA avait vu juste.
+export const addItem = (newName: string): ItemsChange => (items) => {
+  const name = newName.trim();
+  if (!name) return items;
+
+  const existing = items.find(isNamed(name));
+  if (!existing) {
+    return [...items, { name: capitalize(name), confirmed: true, quantity: 1 }];
+  }
+
+  const updated = existing.confirmed
+    ? { ...existing, quantity: itemQuantity(existing) + 1 }
+    : asConfirmed(existing);
+  return items.map((item) => (item === existing ? updated : item));
+};
+
+// Une carte du paquet à glisser : un ingrédient et la photo où il a été vu.
+export type ReviewCard = { photo: StoredPhoto; item: DetectedItem };
+
+// ✅ Les ingrédients à vérifier de ces photos, en cartes : d'abord ceux jamais
+// vus, puis ceux passés (en jaune), sauf si on ne veut que les nouveaux.
+export function reviewCards(
+  photos: StoredPhoto[],
+  { withSkipped = true }: { withSkipped?: boolean } = {}
+): ReviewCard[] {
+  const cards = photos.flatMap((photo) =>
+    (photo.items ?? []).filter((item) => !item.confirmed).map((item) => ({ photo, item }))
+  );
+  const unseen = cards.filter((card) => !card.item.skipped);
+  return withSkipped ? [...unseen, ...cards.filter((card) => card.item.skipped)] : unseen;
 }
 
 // ─────────────────────────────────────────────
@@ -230,6 +341,8 @@ export type PhotoIngredient = {
   confidence?: number;
   // Total sur toutes les photos (2 sur l'une + 1 sur l'autre = 3).
   quantity: number;
+  // À vérifier et passé sur toutes les photos où il est : en jaune.
+  skipped: boolean;
   categories: CategoryKey[];
   refs: ItemRef[];
 };
@@ -248,10 +361,12 @@ export function collectIngredients(photos: StoredPhoto[]) {
         confirmed: item.confirmed,
         confidence: item.confidence,
         quantity: 0,
+        skipped: true,
         categories: [],
         refs: [],
       };
 
+      group.skipped = group.skipped && !item.confirmed && !!item.skipped;
       const category = photo.category ?? "uncategorized";
       if (!group.categories.includes(category)) group.categories.push(category);
       group.refs.push({ photoId: photo.id, name: item.name });

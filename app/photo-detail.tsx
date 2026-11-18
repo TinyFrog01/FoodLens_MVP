@@ -1,9 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TextStyle,
   TouchableOpacity,
   View,
   Image,
@@ -11,6 +14,7 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
+import ReviewDeck from "@/components/ReviewDeck";
 import { usePhotos } from "@/hooks/usePhotos";
 import { confirmAction } from "@/lib/confirm";
 import { tr, useLanguage } from "@/lib/i18n";
@@ -21,14 +25,29 @@ import {
   DetectedItem,
 } from "@/lib/ingredientDetection";
 import {
+  addItem,
   analyzePhoto,
   CategoryKey,
   deletePhotoMessage,
   deletePhotos,
+  editPhotoItems,
   photoDateLabel,
+  ReviewCard,
+  reviewCards,
   reviewItems,
   StoredPhoto as Photo,
 } from "@/lib/photoStore";
+
+const RED = "#E85C41";
+// Ingrédient passé dans le paquet : toujours à vérifier, mais plus tard.
+const YELLOW = "#F59F00";
+
+// Sur le web, le champ « Ajouter un ingrédient » est une ligne de la liste :
+// pas de cadre du navigateur autour (comme sur le téléphone).
+const NO_WEB_OUTLINE = Platform.select<TextStyle>({
+  web: { outlineStyle: "none" } as unknown as TextStyle,
+  default: {},
+});
 
 const formatConfidence = (item: DetectedItem) =>
   item.confidence === undefined ? null : `${Math.round(item.confidence * 100)}%`;
@@ -60,6 +79,21 @@ export default function PhotoDetail() {
   const photoId = id ?? initial?.id;
   const data = photos.find((p) => p.id === photoId) ?? initial;
 
+  // ✅ Le paquet « à vérifier » s'ouvre tout seul quand on arrive sur une
+  // photo qui a des ingrédients jamais vus (ou dès que son analyse en
+  // trouve). Ceux passés, en jaune, ne le rouvrent pas.
+  const [autoDismissed, setAutoDismissed] = useState(false);
+
+  // ✅ Paquet ouvert à la main : tous ceux à vérifier, passés compris (le
+  // chiffre « À vérifier », « Vérifier en glissant »), ou un ingrédient
+  // touché dans la liste, seul, pour corriger son nom.
+  const [opened, setOpened] = useState<{ cards: ReviewCard[]; editing: boolean } | null>(
+    null
+  );
+
+  // ✅ Ingrédient oublié par l'IA : écrit dans la dernière ligne de la liste.
+  const [newName, setNewName] = useState("");
+
   if (!data) return <View style={styles.container} />;
 
   const category = data.category ?? "counter";
@@ -67,14 +101,61 @@ export default function PhotoDetail() {
   const dateLabel = photoDateLabel(data);
 
   const items = data.items ?? [];
-  const { identified, needCheck, total } = countItems(items);
-  const toReview = items.filter((i) => !i.confirmed);
+  const { identified, needCheck, skipped, total } = countItems(items);
+  // Jamais vus d'abord, puis passés : le même ordre que dans le paquet.
+  const toReview = reviewCards([data]).map((card) => card.item);
   const confirmed = items.filter((i) => i.confirmed);
+  // Tous passés : le chiffre « À vérifier » passe au jaune.
+  const checkColor = skipped > 0 && skipped === needCheck ? YELLOW : RED;
+
+  const autoCards =
+    !autoDismissed && data.detection === "done"
+      ? reviewCards([data], { withSkipped: false })
+      : [];
+  const deck = opened ?? (autoCards.length > 0 ? { cards: autoCards, editing: false } : null);
+  const reviewAll = () => setOpened({ cards: reviewCards([data]), editing: false });
+  const edit = (item: DetectedItem) =>
+    setOpened({ cards: [{ photo: data, item }], editing: true });
+  // Fermé (ou fini) : il ne se rouvre plus tout seul pendant cette visite.
+  const closeDeck = () => {
+    setOpened(null);
+    setAutoDismissed(true);
+  };
+
+  // Seulement une fois l'analyse terminée : une analyse (re)lancée remplace
+  // toute la liste, l'ajout serait perdu.
+  const canAdd = data.detection === "done";
+  const addName = newName.trim();
+  const addIngredient = () => {
+    if (!addName) return;
+    editPhotoItems(data.id, addItem(addName)).catch(console.error);
+    setNewName("");
+  };
 
   const review = (item: DetectedItem, action: "confirm" | "remove") =>
     reviewItems([{ photoId: data.id, name: item.name }], action).catch(
       console.error
     );
+
+  // Le nom seul est le bouton : les boutons Garder / Retirer de la ligne
+  // restent à part (un bouton dans un bouton est invisible à VoiceOver).
+  const renderItemName = (item: DetectedItem, color: string) => (
+    <TouchableOpacity
+      style={styles.itemLeft}
+      onPress={() => edit(item)}
+      accessibilityRole="button"
+      accessibilityLabel={tr(`Modifier ${item.name}`, `Edit ${item.name}`)}
+    >
+      <View style={[styles.itemDot, { backgroundColor: color }]} />
+      <Text style={styles.itemName} numberOfLines={1}>
+        {describeItems([item])}
+      </Text>
+      {formatConfidence(item) && (
+        <Text style={styles.itemConfidence}>{formatConfidence(item)}</Text>
+      )}
+      <Ionicons name="pencil" size={13} color="#C4C4BC" style={styles.editIcon} />
+    </TouchableOpacity>
+  );
 
   const handleDelete = () =>
     confirmAction({
@@ -127,6 +208,10 @@ export default function PhotoDetail() {
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 100 }}
+      // Champ « Ajouter un ingrédient » : le bouton Ajouter répond dès le
+      // premier toucher, clavier ouvert, et iOS remonte le champ au-dessus.
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
     >
       {/* Top bar */}
       <View style={styles.topBar}>
@@ -169,12 +254,25 @@ export default function PhotoDetail() {
 
         <View style={styles.separator} />
 
-        <View style={styles.stat}>
-          <Text style={[styles.statNumber, { color: "#E85C41" }]}>
-            {needCheck}
-          </Text>
-          <Text style={styles.statText}>{tr("À vérifier", "To check")}</Text>
-        </View>
+        {/* ✅ Le chiffre « À vérifier » ouvre le paquet avec tous ceux à
+            vérifier, passés compris. */}
+        <TouchableOpacity
+          style={styles.stat}
+          onPress={reviewAll}
+          disabled={needCheck === 0}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: needCheck === 0 }}
+          accessibilityLabel={tr(
+            `${needCheck} à vérifier : les revoir en glissant`,
+            `${needCheck} to check: review them by swiping`
+          )}
+        >
+          <Text style={[styles.statNumber, { color: checkColor }]}>{needCheck}</Text>
+          <View style={styles.statLabelRow}>
+            <Text style={styles.statLabel}>{tr("À vérifier", "To check")}</Text>
+            {needCheck > 0 && <Ionicons name="chevron-forward" size={12} color="#777" />}
+          </View>
+        </TouchableOpacity>
       </View>
 
       {renderAnalysisState()}
@@ -185,10 +283,19 @@ export default function PhotoDetail() {
           <Text style={styles.sectionTitle}>{tr("À vérifier", "To check")}</Text>
           <Text style={styles.sectionHint}>
             {tr(
-              `L'IA en est sûre à moins de ${Math.round(CONFIDENCE_THRESHOLD * 100)} %. Garde ceux qui sont vraiment dans ton frigo.`,
-              `The AI is less than ${Math.round(CONFIDENCE_THRESHOLD * 100)}% sure. Keep the ones that are really in your fridge.`
+              `L'IA en est sûre à moins de ${Math.round(CONFIDENCE_THRESHOLD * 100)} %. Garde ceux qui sont vraiment dans ton frigo : les autres ne comptent pas dans les recettes.`,
+              `The AI is less than ${Math.round(CONFIDENCE_THRESHOLD * 100)}% sure. Keep the ones that are really in your fridge: the others don't count in recipes.`
             )}
+            {skipped > 0 &&
+              tr(" En jaune : ceux que tu as passés.", " In yellow: the ones you skipped.")}
           </Text>
+
+          <TouchableOpacity style={styles.swipeButton} onPress={reviewAll}>
+            <MaterialCommunityIcons name="gesture-swipe-horizontal" size={18} color="white" />
+            <Text style={styles.swipeButtonText}>
+              {tr("Vérifier en glissant", "Review by swiping")}
+            </Text>
+          </TouchableOpacity>
 
           <View style={styles.itemsCard}>
             {toReview.map((item, index) => (
@@ -199,17 +306,7 @@ export default function PhotoDetail() {
                   index !== toReview.length - 1 && styles.itemRowBorder,
                 ]}
               >
-                <View style={styles.itemLeft}>
-                  <View style={[styles.itemDot, { backgroundColor: "#E85C41" }]} />
-                  <Text style={styles.itemName} numberOfLines={1}>
-                    {describeItems([item])}
-                  </Text>
-                  {formatConfidence(item) && (
-                    <Text style={styles.itemConfidence}>
-                      {formatConfidence(item)}
-                    </Text>
-                  )}
-                </View>
+                {renderItemName(item, item.skipped ? YELLOW : RED)}
 
                 <View style={styles.reviewActions}>
                   <TouchableOpacity
@@ -232,7 +329,7 @@ export default function PhotoDetail() {
         </View>
       )}
 
-      {confirmed.length > 0 && (
+      {(confirmed.length > 0 || canAdd) && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{tr("Identifiés", "Identified")}</Text>
 
@@ -242,24 +339,43 @@ export default function PhotoDetail() {
                 key={item.name}
                 style={[
                   styles.itemRow,
-                  index !== confirmed.length - 1 && styles.itemRowBorder,
+                  (index !== confirmed.length - 1 || canAdd) && styles.itemRowBorder,
                 ]}
               >
-                <View style={styles.itemLeft}>
-                  <View style={[styles.itemDot, { backgroundColor: "#37B24D" }]} />
-                  <Text style={styles.itemName} numberOfLines={1}>
-                    {describeItems([item])}
-                  </Text>
-                  {formatConfidence(item) && (
-                    <Text style={styles.itemConfidence}>
-                      {formatConfidence(item)}
-                    </Text>
-                  )}
-                </View>
+                {renderItemName(item, "#37B24D")}
 
                 <Ionicons name="checkmark-circle" size={18} color="#37B24D" />
               </View>
             ))}
+
+            {/* ✅ Au bout de la liste : ce que l'IA n'a pas vu. Entrée garde le
+                clavier ouvert pour en ajouter plusieurs à la suite. */}
+            {canAdd && (
+              <View style={styles.itemRow}>
+                <Ionicons name="add" size={18} color="#37B24D" style={styles.addIcon} />
+                <TextInput
+                  style={[styles.addInput, NO_WEB_OUTLINE]}
+                  value={newName}
+                  onChangeText={setNewName}
+                  placeholder={tr("Ajouter un ingrédient", "Add an ingredient")}
+                  placeholderTextColor="#A6A6A0"
+                  accessibilityLabel={tr("Ajouter un ingrédient", "Add an ingredient")}
+                  returnKeyType="done"
+                  onSubmitEditing={addIngredient}
+                  blurOnSubmit={false}
+                  autoCorrect={false}
+                />
+                {addName !== "" && (
+                  <TouchableOpacity
+                    style={styles.keepButton}
+                    onPress={addIngredient}
+                    accessibilityLabel={tr(`Ajouter ${addName}`, `Add ${addName}`)}
+                  >
+                    <Text style={styles.keepButtonText}>{tr("Ajouter", "Add")}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -292,6 +408,13 @@ export default function PhotoDetail() {
         <Ionicons name="trash-outline" size={18} color="#E85C41" />
         <Text style={styles.deleteButtonText}>{tr("Supprimer la photo", "Delete the photo")}</Text>
       </TouchableOpacity>
+
+      <ReviewDeck
+        visible={deck !== null}
+        cards={deck?.cards ?? []}
+        editing={deck?.editing}
+        onClose={closeDeck}
+      />
     </ScrollView>
   );
 }
@@ -399,6 +522,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  // « À vérifier › » : le libellé et sa flèche (le chiffre se touche).
+  statLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    marginTop: 4,
+  },
+
+  statLabel: {
+    fontSize: 13,
+    color: "#777",
+  },
+
   section: {
     marginBottom: 25,
   },
@@ -417,11 +553,12 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
+  // Pas de marge verticale ici : elle est dans le nom (itemLeft), pour que
+  // toute la hauteur de la ligne réponde au toucher.
   itemRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
   },
 
   itemRowBorder: {
@@ -431,9 +568,30 @@ const styles = StyleSheet.create({
 
   itemLeft: {
     flex: 1,
+    alignSelf: "stretch",
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 14,
     marginRight: 10,
+  },
+
+  editIcon: {
+    marginLeft: 8,
+  },
+
+  // Le « + » centré sur les pastilles du dessus, le texte aligné sur les noms.
+  addIcon: {
+    marginLeft: -5,
+    marginRight: 5,
+  },
+
+  addInput: {
+    flex: 1,
+    paddingVertical: 14,
+    marginRight: 10,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1C1C1A",
   },
 
   itemDot: {
@@ -468,6 +626,7 @@ const styles = StyleSheet.create({
   reviewActions: {
     flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 14,
   },
 
   removeButton: {
@@ -485,6 +644,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 30,
+  },
+
+  swipeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#37B24D",
+    paddingVertical: 12,
+    borderRadius: 30,
+    marginBottom: 12,
+  },
+
+  swipeButtonText: {
+    marginLeft: 8,
+    color: "white",
+    fontWeight: "700",
+    fontSize: 15,
   },
 
   keepButtonText: {

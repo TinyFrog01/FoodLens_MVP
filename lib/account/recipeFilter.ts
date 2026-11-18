@@ -58,8 +58,56 @@ export function ingredientMatches(ingredientName: string, term: string) {
   return false;
 }
 
+// Tous les mots des ingrédients d'une recette (français et anglais), lus une
+// seule fois. Choisir pour qui on cuisine relit les milliers de recettes pour
+// chaque goût et chaque allergie de chaque personne : la plupart des termes
+// n'y sont pas, et un mot absent suffit à les écarter sans relire chaque
+// ingrédient (cocher une personne prenait plusieurs centaines de ms).
+type RecipeWords = { names: string[]; words: Set<string> };
+const recipeWordsCache = new WeakMap<Recipe, RecipeWords>();
+
+function recipeWords(recipe: Recipe): RecipeWords {
+  let entry = recipeWordsCache.get(recipe);
+  if (!entry) {
+    const names = recipeNames(recipe);
+    const words = new Set<string>();
+    for (const name of names) {
+      for (const word of normalizeWords(name)) words.add(word);
+    }
+    entry = { names, words };
+    recipeWordsCache.set(recipe, entry);
+  }
+  return entry;
+}
+
+// Vrai si un ingrédient de la recette correspond au terme : même réponse que
+// ingredientMatches sur chaque nom français et anglais, en bien plus rapide.
+export function recipeHasIngredient(recipe: Recipe, term: string) {
+  const needle = normalizeWords(term);
+  if (needle.length === 0) return false;
+  const { names, words } = recipeWords(recipe);
+  for (const word of needle) {
+    if (!words.has(word)) return false;
+  }
+  // Un seul mot, présent dans un ingrédient : il correspond. Plusieurs mots
+  // doivent se suivre dans le même ingrédient.
+  return needle.length === 1 || names.some((name) => ingredientMatches(name, term));
+}
+
+// Les mêmes durées reviennent d'une recette à l'autre (« 30 min », « 1 h »).
+const minutesCache = new Map<string, number | null>();
+
 // « 1 h 20 min », « 1h30 », « 2 heures », « 40–45 minutes », « 30 »… -> minutes
 export function parseMinutes(raw: string): number | null {
+  let minutes = minutesCache.get(raw);
+  if (minutes === undefined) {
+    minutes = readMinutes(raw);
+    minutesCache.set(raw, minutes);
+  }
+  return minutes;
+}
+
+function readMinutes(raw: string): number | null {
   const text = raw.toLowerCase().replace(/[–—]/g, "-");
   const tokens = [...text.matchAll(/(\d+(?:[.,]\d+)?)\s*(heures?|h|minutes?|min)?/g)];
   if (tokens.length === 0) return null;
@@ -148,10 +196,9 @@ export function evaluateRecipe(
   const allergenReasons: Extract<HideReason, { kind: "allergen" }>[] = [];
   const avoidReasons: Extract<HideReason, { kind: "avoid" }>[] = [];
   const dietReasons: Extract<HideReason, { kind: "diet" }>[] = [];
-  // Lus seulement si quelqu'un a des goûts ou des allergies à vérifier.
-  let names: string[] | null = null;
-  const has = (term: string) =>
-    (names ??= recipeNames(recipe)).some((n) => ingredientMatches(n, term));
+  // Les mots de la recette ne sont lus que si quelqu'un a des goûts ou des
+  // allergies à vérifier.
+  const has = (term: string) => recipeHasIngredient(recipe, term);
 
   for (const person of people) {
     for (const allergen of person.allergens) {

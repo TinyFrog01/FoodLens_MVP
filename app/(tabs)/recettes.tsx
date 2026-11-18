@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import CompletionBar from "@/components/CompletionBar";
+import ReviewDeck from "@/components/ReviewDeck";
 import AvatarButton from "@/components/account/AvatarButton";
 import { usePhotos } from "@/hooks/usePhotos";
 import { confirmAction } from "@/lib/confirm";
@@ -22,6 +23,8 @@ import {
   deletePhotoMessage,
   deletePhotos,
   photoDateLabel,
+  ReviewCard,
+  reviewCards,
   StoredPhoto as Photo,
 } from "@/lib/photoStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -141,6 +144,11 @@ export default function Recette() {
     (sum, p) => sum + countItems(p.items).needCheck,
     0
   );
+  const totalSkipped = photos.reduce((sum, p) => sum + countItems(p.items).skipped, 0);
+
+  // ✅ Le chiffre « À vérifier » ouvre le paquet à glisser avec ceux de
+  // toutes les photos (jamais vus d'abord, puis passés). Figé à l'ouverture.
+  const [reviewing, setReviewing] = useState<ReviewCard[] | null>(null);
 
   // ✅ Badge de la card selon l'état de l'analyse.
   const renderDetectionBadge = (item: Photo) => {
@@ -166,13 +174,17 @@ export default function Recette() {
       );
     }
 
-    const { identified, needCheck } = countItems(item.items);
+    const { identified, needCheck, skipped } = countItems(item.items);
 
     if (needCheck > 0) {
+      // Tous passés dans le paquet : en jaune, comme dans la liste de la photo.
+      const allSkipped = skipped === needCheck;
       return (
-        <View style={styles.badge}>
-          <Ionicons name="warning-outline" size={14} color="#E85C41" />
-          <Text style={styles.badgeText}>{tr(`${needCheck} à vérifier`, `${needCheck} to check`)}</Text>
+        <View style={[styles.badge, allSkipped && styles.badgeSkipped]}>
+          <Ionicons name="warning-outline" size={14} color={allSkipped ? YELLOW : "#E85C41"} />
+          <Text style={[styles.badgeText, allSkipped && styles.badgeSkippedText]}>
+            {tr(`${needCheck} à vérifier`, `${needCheck} to check`)}
+          </Text>
         </View>
       );
     }
@@ -438,10 +450,36 @@ export default function Recette() {
           <Text style={styles.statLabel}>{tr("Aliments vus", "Foods seen")}</Text>
         </View>
         <View style={styles.statDivider} />
-        <View style={styles.statBlock}>
-          <Text style={styles.statNumber}>{totalNeedCheck}</Text>
-          <Text style={styles.statLabel}>{tr("À vérifier", "To check")}</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.statBlock}
+          onPress={() => setReviewing(reviewCards(photos))}
+          disabled={totalNeedCheck === 0}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: totalNeedCheck === 0 }}
+          accessibilityLabel={tr(
+            `${totalNeedCheck} à vérifier : les revoir en glissant`,
+            `${totalNeedCheck} to check: review them by swiping`
+          )}
+        >
+          <Text
+            style={[
+              styles.statNumber,
+              totalNeedCheck > 0 && {
+                color: totalSkipped === totalNeedCheck ? YELLOW : "#E85C41",
+              },
+            ]}
+          >
+            {totalNeedCheck}
+          </Text>
+          <View style={styles.statLabelRow}>
+            <Text style={[styles.statLabel, styles.statLabelInRow]}>
+              {tr("À vérifier", "To check")}
+            </Text>
+            {totalNeedCheck > 0 && (
+              <Ionicons name="chevron-forward" size={12} color={TEXT_MUTED} />
+            )}
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* ✅ Tout le contenu qui doit respecter le padding horizontal de 16
@@ -471,11 +509,19 @@ export default function Recette() {
           CATEGORIES.map((c) => renderSection(c.key))
         )}
       </View>
+
+      <ReviewDeck
+        visible={reviewing !== null}
+        cards={reviewing ?? []}
+        onClose={() => setReviewing(null)}
+      />
     </ScrollView>
   );
 }
 
 const GREEN = "#3E9C5C";
+// Ingrédients passés dans le paquet : toujours à vérifier, mais plus tard.
+const YELLOW = "#F59F00";
 const BG = "#F7F6F3";
 const CARD_BG = "#FFFFFF";
 const TEXT_MUTED = "#8E8E86";
@@ -513,6 +559,9 @@ const styles = StyleSheet.create({
   statNumber: { fontSize: 24, fontWeight: "800", color: "#1C1C1A" },
   statNumberWarn: { color: WARN },
   statLabel: { fontSize: 13, color: TEXT_MUTED, marginTop: 4 },
+  // « À vérifier › » : le libellé et sa flèche (le chiffre se touche).
+  statLabelRow: { flexDirection: "row", alignItems: "center", gap: 2, marginTop: 4 },
+  statLabelInRow: { marginTop: 0 },
 
   container: {
     flex: 1,
@@ -716,6 +765,14 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     color: "#E85C41",
     fontWeight: "700",
+  },
+
+  badgeSkipped: {
+    backgroundColor: "#FFF4D6",
+  },
+
+  badgeSkippedText: {
+    color: "#A86A00",
   },
 
   badgeGreen: {

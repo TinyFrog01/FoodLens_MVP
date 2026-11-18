@@ -27,8 +27,10 @@ import {
   countItems,
   describeItems,
   DetectedItem,
+  Detection,
   detectionErrorMessage,
   DetectionStatus,
+  ImageSize,
 } from "@/lib/ingredientDetection";
 import {
   CATEGORY_LABELS,
@@ -65,6 +67,7 @@ type Shot = {
   category: CategoryKey | null;
   detection: DetectionStatus;
   items?: DetectedItem[];
+  imageSize?: ImageSize;
   detectionError?: string;
 };
 
@@ -236,7 +239,7 @@ export default function Camera() {
 
   // ✅ Analyse en cours de chaque photo (par id de Shot), pour pouvoir
   // enregistrer son résultat même si elle se termine après "Save".
-  const detectionsRef = useRef(new Map<string, Promise<DetectedItem[]>>());
+  const detectionsRef = useRef(new Map<string, Promise<Detection>>());
 
   // ✅ Flash blanc sur l'aperçu à chaque photo, pour confirmer la prise
   // sans interrompre la rafale par un écran de prévisualisation.
@@ -358,8 +361,8 @@ export default function Camera() {
     detectionsRef.current.set(id, detection);
 
     detection.then(
-      (items) =>
-        patchShot(id, { detection: "done", items, detectionError: undefined }),
+      ({ items, imageSize }) =>
+        patchShot(id, { detection: "done", items, imageSize, detectionError: undefined }),
       (err) =>
         patchShot(id, {
           detection: "error",
@@ -475,6 +478,7 @@ export default function Camera() {
       takenAt: now.toISOString(),
       detection: shot.detection,
       items: shot.items,
+      imageSize: shot.imageSize,
       detectionError: shot.detectionError,
     });
 

@@ -95,6 +95,11 @@ const ToReviewCard = ({ ingredients }: { ingredients: PhotoIngredient[] }) => {
               {ingredient.name}
             </Text>
             <Text style={styles.reviewMeta} numberOfLines={1}>
+              {/* Passé dans le paquet à glisser : en jaune, comme sur la photo.
+                  En tête, pour ne pas être coupé au bout de la ligne. */}
+              {ingredient.skipped && (
+                <Text style={styles.reviewSkipped}>{tr("Passé · ", "Skipped · ")}</Text>
+              )}
               {categoriesLabel(ingredient)}
               {ingredient.confidence !== undefined
                 ? tr(
@@ -637,6 +642,7 @@ const styles = StyleSheet.create({
   reviewRowBorder: { borderTopWidth: 1, borderTopColor: "#F0F0EC" },
   reviewName: { fontSize: 15, fontWeight: "700", color: "#1C1C1A" },
   reviewMeta: { fontSize: 13, color: TEXT_MUTED, marginTop: 2 },
+  reviewSkipped: { color: "#F59F00", fontWeight: "700" },
   reviewRemove: {
     width: 32,
     height: 32,

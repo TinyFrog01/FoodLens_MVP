@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -65,7 +65,9 @@ export function CookingForPill({ onPress }: { onPress: () => void }) {
   );
 }
 
-// Feuille « Je cuisine pour » : chaque changement s'applique tout de suite.
+// Feuille « Je cuisine pour ». Les cases cochées restent dans la feuille tant
+// qu'elle est ouverte : cocher est instantané, et les milliers de recettes ne
+// sont refaites qu'une fois, en la fermant (Terminé, toucher à côté, retour).
 export function CookingForSheet({
   visible,
   onClose,
@@ -76,25 +78,32 @@ export function CookingForSheet({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { account, setCookingFor } = useAccount();
+  const [draft, setDraft] = useState<string[] | null>(null);
   useLanguage();
 
   if (!account) return null;
 
   const everyone = getAllMembers(account);
-  const selected = getCookingFor(account).map((m) => m.id);
+  const saved = getCookingFor(account).map((m) => m.id);
+  const selected = draft ?? saved;
 
   const toggle = (id: string) => {
-    if (selected.includes(id)) {
-      if (selected.length > 1) setCookingFor(selected.filter((x) => x !== id));
-    } else {
-      setCookingFor([...selected, id]);
-    }
+    const on = selected.includes(id);
+    if (on && selected.length === 1) return; // toujours au moins une personne
+    // Dans l'ordre de la famille, pour comparer au choix enregistré.
+    setDraft(everyone.map((m) => m.id).filter((x) => (x === id ? !on : selected.includes(x))));
+  };
+
+  const close = () => {
+    if (draft && draft.join() !== saved.join()) setCookingFor(draft);
+    setDraft(null);
+    onClose();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={close} />
 
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 18 }]}>
           <View style={styles.handle} />
@@ -145,7 +154,7 @@ export function CookingForSheet({
           <View style={styles.footer}>
             <Pressable
               onPress={() => {
-                onClose();
+                close();
                 router.push("/profile");
               }}
               hitSlop={8}
@@ -154,7 +163,7 @@ export function CookingForSheet({
               <Ionicons name="people-outline" size={18} color={Palette.green} />
               <Text style={styles.manageText}>{tr("Gérer ta famille", "Manage your family")}</Text>
             </Pressable>
-            <PrimaryButton label={tr("Terminé", "Done")} onPress={onClose} style={{ flex: 1 }} />
+            <PrimaryButton label={tr("Terminé", "Done")} onPress={close} style={{ flex: 1 }} />
           </View>
         </View>
       </View>
